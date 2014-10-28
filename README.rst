@@ -21,6 +21,8 @@ Installation and development
 A virtual environment is useful for installing this package.
 Currently, we need numpy, scipy and pytest. Quite possibly, more dependencies will arise.
 
+After checking out and installing the required dependencies, it may be possibly to install the package locally by::
+pip install -e .
 
 Features
 --------
