@@ -15,7 +15,10 @@ compartmentmodels
 Some kinetic models for DCE MRI
 
 * Free software: BSD license
-* Documentation: https://compartmentmodels.readthedocs.org.
+
+Installation and development
+----------
+
 
 Features
 --------
