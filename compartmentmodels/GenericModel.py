@@ -2,11 +2,6 @@
 import scipy as sp
 from scipy import optimize
 
-#import pyximport
-
-# pyximport.install()
-#from cy_conv_exp import cy_conv_exp
-
 
 class GenericModel:
 
@@ -27,6 +22,7 @@ class GenericModel:
         self.aic = 0.0
         self.rc = 0
         self.parameters = []
+        self._cythonavailable = False
 
         # needed for calculation of the Akaike information criterion:
         self.nooffreeparameters = 2
@@ -99,7 +95,31 @@ class GenericModel:
         http://edoc.ub.uni-muenchen.de/14951/
         """
 #        y=cy_conv_exp(list(self.time),list(self.curve),list(self.aif),tau)
-        y = cy_conv_exp(self.time, self.curve, self.aif, lamda)
+        if self._cythonavailable:
+            pass
+            # y = cy_conv_exp(self.time, self.curve, self.aif, lamda)
+        else:
+            # calculate the discrete convolution in pure python
+            # todo: check for lamda == zero: in this case, convolve with
+            # constant, i.e. intvector.
+
+            # for i in range(1,N):
+            #     dt=t[i]-t[i-1]
+            #     edt=np.exp(-lam*dt)
+            #     m=(x[i]-x[i-1])/dt
+            #     y[i]=edt*y[i-1]+(x[i-1]-m*t[i-1])/lam*(1-edt)+m/lam/lam*((lam*t[i]-1)-edt*(lam*t[i-1]-1))
+            # return y
+
+            # scipy implementation:
+            dt = sp.diff(self.time)
+            edt = sp.exp(-lamda*dt)
+            m = sp.diff(self.aif)/dt
+            y = sp.zeros_like(self.time)
+            # should we write this as generator maybe?
+            for i in range(1, len(y)):
+                y[i] = edt[i]*y[i-1] + (self.aif[i-1]-m[i]*self.time[i-1])/lamda*(1-edt[i]) + \
+                    m[i]/lamda/lamda * ((lamda*self.time[i]-1)-edt[i]*(lamda*self.time[i-1]-1))
+            return y
         return sp.asarray(y)
 
     def intvector(self):
