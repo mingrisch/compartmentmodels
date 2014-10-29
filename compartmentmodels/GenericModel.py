@@ -28,13 +28,9 @@ class GenericModel:
         self.nooffreeparameters = 2
 
         # this dictionary will contain human-readable (parameter,value) entries
-        self.readable_parameters = {'FP': 0.0,
-                                    'VP': 0.0,
-                                    'TP': 0.0,
-                                    'E': 0.0,
-                                    'PS': 0.0,
-                                    'VE': 0.0,
-                                    'TE': 0.0}
+        self.readable_parameters = {'F': 0.0,
+                                    'v': 0.0,
+                                    'MTT': 0.0}
 
     def __str__(self):
         return "Generic model"
@@ -42,18 +38,17 @@ class GenericModel:
     # get functions
     def get_parameters(self):
         """To be used after a successful fit.
-        returns a dictionary with keys FP, VP, TP, PS, VE, TE
+        Converts the 'raw' fit parameters to the 'physiological' model
+        parameters and saves them in self.readable_parameters. For the
+        one-compartment, this is a flow, a volume and the corresponding transit
+        time. Derived models will have to override this method.
         """
         FP = self.parameters[0] * 6000.
         VP = self.parameters[0] / self.parameters[1] * 100
         TP = 1 / self.parameters[1]
-        self.readable_parameters["FP"] = FP
-        self.readable_parameters["VP"] = VP
-        self.readable_parameters["TP"] = TP
-        self.readable_parameters["E"] = None
-        self.readable_parameters["PS"] = None
-        self.readable_parameters["VE"] = None
-        self.readable_parameters["TE"] = None
+        self.readable_parameters["F"] = FP
+        self.readable_parameters["v"] = VP
+        self.readable_parameters["MTT"] = TP
 
         return self.readable_parameters
 

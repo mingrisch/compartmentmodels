@@ -41,5 +41,11 @@ def test_genericModel_set_and_get_curve(model):
     np.testing.assert_array_equal(model.get_curve(), curve)
     
 def test_genericModel_readableParameters_contain_all_keys(model):
-    assert all(k in model.readable_parameters for k in  ("F", "v", "MTT"))
+    assert all([k in model.readable_parameters for k in  ("F", "v", "MTT")])
+
+def test_genericModel_python_convolution(model):
+    # load a curve that was calculated with pmi
+    # 'aif' is a boxcar function;
+
+    np.testing.assert_array_equal(model.convolution_w_exp(lamda), curve)
 
