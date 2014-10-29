@@ -46,6 +46,19 @@ def test_genericModel_readableParameters_contain_all_keys(model):
 def test_genericModel_python_convolution(model):
     # load a curve that was calculated with pmi
     # 'aif' is a boxcar function;
+    testfile='tests/convolutions.csv'
+    with open(testfile) as f:
+        header=f.readl
+    entries = header.split(',')
+    # to do get lamdalist from entries (skip first two, convert to float)
+    inarray = np.loadtxt('testfile')
+    time = inarray[:,0]
+    aif= inarray[:,1]
 
-    np.testing.assert_array_equal(model.convolution_w_exp(lamda), curve)
+    model.set_time(time)
+    model.set_aif(aif)
+
+    for i, lam in enumerate(lamdalist):
+        curve=inarray[:,i+2]
+        np.testing.assert_array_equal(model.convolution_w_exp(lamda), curve)
 
