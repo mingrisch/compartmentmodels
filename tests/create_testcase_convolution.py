@@ -34,6 +34,7 @@ if __name__ == '__main__':
     outarray[1,:]=aif
 
     fileheader=','.join(fileheader)
+    print fileheader
     
     for i, lam in enumerate(lambdalist):
         curve=gp.convolution_w_exp(lam)

@@ -1,4 +1,5 @@
 # cython: profile=True
+import numpy as np
 import scipy as sp
 from scipy import optimize
 
@@ -106,14 +107,20 @@ class GenericModel:
             # return y
 
             # scipy implementation:
-            dt = sp.diff(self.time)
-            edt = sp.exp(-lamda*dt)
-            m = sp.diff(self.aif)/dt
-            y = sp.zeros_like(self.time)
-            # should we write this as generator maybe?
+            # dt = sp.diff(self.time)
+            # edt = sp.exp(-lamda*dt)
+            # m = sp.diff(self.aif)/dt
+            # y = sp.zeros_like(self.time)
+            # # should we write this as generator maybe?
+            t = self.time
+            x = self.aif
+            y = np.zeros_like(t)
+
             for i in range(1, len(y)):
-                y[i] = edt[i]*y[i-1] + (self.aif[i-1]-m[i]*self.time[i-1])/lamda*(1-edt[i]) + \
-                    m[i]/lamda/lamda * ((lamda*self.time[i]-1)-edt[i]*(lamda*self.time[i-1]-1))
+                dt = t[i] - t[i-1]
+                edt=np.exp(-lamda*dt)
+                m = (x[i]-x[i-1])/dt
+                y[i] = edt*y[i-1] + (x[i-1]-m*t[i-1])/lamda*(1-edt)+ m/lamda/lamda * ((lamda*t[i]-1)-edt*(lamda*t[i-1]-1))
             return y
         return sp.asarray(y)
 
@@ -139,7 +146,7 @@ class GenericModel:
         p[0]*exp(-t*p[1]).  self.residuals is set to the resulting
         array, furthermore, the sum of resulting array is returned.  Note:
         This function will be called from the solver quite often. For
-        optimizing performance, someone could rewrite it in c or
+        ptimizing performance, someone could rewrite it in c or
         fortran. For now, we're happy with this implementation """
 
         residuals = self.curve - \
