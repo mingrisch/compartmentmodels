@@ -1,7 +1,7 @@
 # cython: profile=True
 import numpy as np
 import scipy as sp
-from scipy import optimize
+from scipy import optimize, signal
 
 
 class GenericModel:
@@ -85,19 +85,34 @@ class GenericModel:
         self.aif = newaif
 
     # convolution of aif with an exponential
-    def convolution_w_exp(self, lamda):
+    def convolution_w_exp(self, lamda, fftconvolution=False):
         """ returns the convolution of self.aif with an exponential
          exp(-lamda*t). we follow the notation introduced in
         http://edoc.ub.uni-muenchen.de/14951/
         """
+        # todo: check for lamda == zero: in this case, convolve with
+        # constant, i.e. intvector.
 #        y=cy_conv_exp(list(self.time),list(self.curve),list(self.aif),tau)
-        if self._cythonavailable:
+        if fftconvolution:
+            # calculate the convolution via fft
+            expon = np.exp(-lamda*self.time)
+            #y = signal.fftconvolve(self.aif, expon, mode='same')
+            y = np.convolve(self.aif, expon, mode='full')
+            # we need to scale down by a factor dt
+            y=y*(self.time[1]-self.time[0])
+            # and we need the first half only:
+            y=y[0:len(y)/2+1]
+
+            return y
+
+            
+        elif self._cythonavailable:
+            # calculcate the discrete  convolution with the cpython
+            # implementation
             pass
             # y = cy_conv_exp(self.time, self.curve, self.aif, lamda)
         else:
             # calculate the discrete convolution in pure python
-            # todo: check for lamda == zero: in this case, convolve with
-            # constant, i.e. intvector.
 
             # for i in range(1,N):
             #     dt=t[i]-t[i-1]
@@ -105,13 +120,8 @@ class GenericModel:
             #     m=(x[i]-x[i-1])/dt
             #     y[i]=edt*y[i-1]+(x[i-1]-m*t[i-1])/lam*(1-edt)+m/lam/lam*((lam*t[i]-1)-edt*(lam*t[i-1]-1))
             # return y
-
-            # scipy implementation:
-            # dt = sp.diff(self.time)
-            # edt = sp.exp(-lamda*dt)
-            # m = sp.diff(self.aif)/dt
-            # y = sp.zeros_like(self.time)
-            # # should we write this as generator maybe?
+            # this is a 1:1 port from the cython version.
+            # maybe this could be written more efficiently as a generator
             t = self.time
             x = self.aif
             y = np.zeros_like(t)
@@ -122,7 +132,7 @@ class GenericModel:
                 m = (x[i]-x[i-1])/dt
                 y[i] = edt*y[i-1] + (x[i-1]-m*t[i-1])/lamda*(1-edt)+ m/lamda/lamda * ((lamda*t[i]-1)-edt*(lamda*t[i-1]-1))
             return y
-        return sp.asarray(y)
+        #return sp.asarray(y)
 
     def intvector(self):
         """This function calculates the convolution of the arterial
