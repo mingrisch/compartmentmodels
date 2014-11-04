@@ -5,12 +5,53 @@ from scipy import optimize, signal
 
 
 class GenericModel:
-
     """This is a base class for all models. It provides the general
     framework and contains a fit function for a simple one compartment
     model. For other models, we recommend subclassing this class and
     overwriting/redefining the function calc_residuals(self,
-    parameters)"""
+    parameters)
+    
+    
+    
+    Attributes
+    ----------
+
+    time: np.ndarray
+        the time axis
+
+    aif: np.ndarray:
+        the arterial input function
+
+    curve: np.ndarray
+        the (measured) curve to which the model should be fitted
+
+    residuals: np.ndarray
+        residual vector after a fit
+
+    fit: np.ndarray
+        the curve as described by the model (after a fit)
+
+    aic: float
+        Akaike information criterion, after a fit
+
+    rc: int
+        return code of the fit routine
+
+    parameters: np.ndarray
+        array of raw parameters 
+        todo: should be changed to _parameters, only internal us
+
+    _cython_available: bool
+        do we have cython, or use it?
+
+
+    readable_parameters: dict
+        Dictionary of readable parameters 
+
+    
+    
+    
+    """
 
     def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1)):
         # todo: typecheck for time, curve, aif
@@ -38,11 +79,27 @@ class GenericModel:
 
     # get functions
     def get_parameters(self):
-        """To be used after a successful fit.
+        """Return a dictionary of fitted model parameters.
+        
+        To be used after a successful fit.
         Converts the 'raw' fit parameters to the 'physiological' model
-        parameters and saves them in self.readable_parameters. For the
-        one-compartment, this is a flow, a volume and the corresponding transit
-        time. Derived models will have to override this method.
+        parameters and saves them in self.readable_parameters. 
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+
+        dict
+            Dictionary containing the estimated model parameters
+
+        Notes
+        -----
+
+        For the
+        one-compartment, these parameters aris a flow, a volume and the corresponding transit time. Derived models will likely have to override this method.
+p
         """
         FP = self.parameters[0] * 6000.
         VP = self.parameters[0] / self.parameters[1] * 100
