@@ -1,18 +1,19 @@
 # cython: profile=True
 import numpy as np
 import scipy as sp
-from scipy import optimize, signal
+# from scipy import optimize, signal
 
 
 class GenericModel:
+
     """This is a base class for all models. It provides the general
     framework and contains a fit function for a simple one compartment
     model. For other models, we recommend subclassing this class and
     overwriting/redefining the function calc_residuals(self,
     parameters)
-    
-    
-    
+
+
+
     Attributes
     ----------
 
@@ -38,7 +39,7 @@ class GenericModel:
         return code of the fit routine
 
     parameters: np.ndarray
-        array of raw parameters 
+        array of raw parameters
         todo: should be changed to _parameters, only internal us
 
     _cython_available: bool
@@ -46,11 +47,11 @@ class GenericModel:
 
 
     readable_parameters: dict
-        Dictionary of readable parameters 
+        Dictionary of readable parameters
 
-    
-    
-    
+
+
+
     """
 
     def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1)):
@@ -80,10 +81,10 @@ class GenericModel:
     # get functions
     def get_parameters(self):
         """Return a dictionary of fitted model parameters.
-        
+
         To be used after a successful fit.
         Converts the 'raw' fit parameters to the 'physiological' model
-        parameters and saves them in self.readable_parameters. 
+        parameters and saves them in self.readable_parameters.
         Parameters
         ----------
         None
@@ -97,10 +98,10 @@ class GenericModel:
         Notes
         -----
 
-        For the
-        one-compartment, these parameters aris a flow, a volume and the corresponding transit time. Derived models will likely have to override this method.
-p
-        """
+        For the one-compartment model, these parameters aris a flow, a volume
+        and the corresponding transit time. Derived models will likely have to
+        override this method.  """
+
         FP = self.parameters[0] * 6000.
         VP = self.parameters[0] / self.parameters[1] * 100
         TP = 1 / self.parameters[1]
@@ -152,17 +153,16 @@ p
 #        y=cy_conv_exp(list(self.time),list(self.curve),list(self.aif),tau)
         if fftconvolution:
             # calculate the convolution via fft
-            expon = np.exp(-lamda*self.time)
-            #y = signal.fftconvolve(self.aif, expon, mode='same')
+            expon = np.exp(-lamda * self.time)
+            # y = signal.fftconvolve(self.aif, expon, mode='same')
             y = np.convolve(self.aif, expon, mode='full')
             # we need to scale down by a factor dt
-            y=y*(self.time[1]-self.time[0])
+            y = y * (self.time[1] - self.time[0])
             # and we need the first half only:
-            y=y[0:len(y)/2+1]
+            y = y[0:len(y) / 2 + 1]
 
             return y
 
-            
         elif self._cythonavailable:
             # calculcate the discrete  convolution with the cpython
             # implementation
@@ -184,12 +184,13 @@ p
             y = np.zeros_like(t)
 
             for i in range(1, len(y)):
-                dt = t[i] - t[i-1]
-                edt=np.exp(-lamda*dt)
-                m = (x[i]-x[i-1])/dt
-                y[i] = edt*y[i-1] + (x[i-1]-m*t[i-1])/lamda*(1-edt)+ m/lamda/lamda * ((lamda*t[i]-1)-edt*(lamda*t[i-1]-1))
+                dt = t[i] - t[i - 1]
+                edt = np.exp(-lamda * dt)
+                m = (x[i] - x[i - 1]) / dt
+                y[i] = edt * y[i - 1] + (x[i - 1] - m * t[i - 1]) / lamda * (
+                    1 - edt) + m / lamda / lamda * ((lamda * t[i] - 1) - edt * (lamda * t[i - 1] - 1))
             return y
-        #return sp.asarray(y)
+        # return sp.asarray(y)
 
     def intvector(self):
         """This function calculates the convolution of the arterial
