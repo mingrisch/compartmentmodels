@@ -1,7 +1,7 @@
 # cython: profile=True
 import numpy as np
 import scipy as sp
-from scipy import optimize, signal
+from scipy.optimize import minimize
 
 
 class GenericModel:
@@ -57,7 +57,8 @@ class GenericModel:
 
     """
 
-    def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1)):
+    def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1),
+            startdict={'F': 50.0, 'v': 12.2}):
         # todo: typecheck for time, curve, aif
         # they should be numpy.ndarrays with the same size and dtype float
         self.time = time
@@ -70,15 +71,16 @@ class GenericModel:
         self._parameters = np.zeros(2)
 
         self._cythonavailable = False
-        self._fitted=False
+        self._fitted = False
 
         # needed for calculation of the Akaike information criterion:
         self.nooffreeparameters = 2
 
         # this dictionary will contain human-readable (parameter,value) entries
-        self.readable_parameters = {'F': 0.0,
-                                    'v': 0.0,
-                                    'MTT': 0.0}
+        self.readable_parameters =  startdict
+
+        # convert the dictionary entry to 'raw' parameters:
+        self._parameters=self.convert_startdict(startdict)
 
     def __str__(self):
         return "Generic model"
@@ -103,7 +105,7 @@ class GenericModel:
         Notes
         -----
 
-        For the one-compartment model, these parameters aris a flow, a volume
+        For the one-compartment model, these parameters are a flow, a volume
         and the corresponding transit time. Derived models will likely have to
         override this method.  """
 
@@ -227,7 +229,7 @@ class GenericModel:
             an array with the model values
 
         """
-        modelcurve=parameters[0] * self.convolution_w_exp(parameters[1])
+        modelcurve = parameters[0] * self.convolution_w_exp(parameters[1])
 
         return modelcurve
 
@@ -239,13 +241,13 @@ class GenericModel:
         returns a scalar, the sum of squared residuals
         """
 
-        residuals=self.curve-self.calc_modelfunction(parameters)
-        self.residuals=residuals
-        return np.sum(residuals**2)
+        residuals = self.curve - self.calc_modelfunction(parameters)
+        self.residuals = residuals
+        return np.sum(residuals ** 2)
 
     def calc_residuals(self, parameters, fjac=None):
         """Deprecated. (was used for the mpfit fitting).
-        
+
         This function calculates the residuals for a
         one-compartment model with residual function
         p[0]*exp(-t*p[1]).  self.residuals is set to the resulting
@@ -271,34 +273,37 @@ class GenericModel:
         if not type(startdict).__name__ == 'dict':
             return
         # easy for the generic model:
-        FP = startdict.get("FP") / 6000.  # we need to convert to SI
-        VP = startdict.get("VP") / 100
+        FP = startdict.get("F") / 6000.  # we need to convert to SI
+        VP = startdict.get("v") / 100
         lamda = 1. / (VP / FP)
-        return [FP, lamda]
+        return np.asarray([FP, lamda])
 
     def fit_model(self, startdict,
                   constrained=True):
         """ Perform the model fitting. 
-        
+
         this function attempts to fit the model to the curve, using
         the startparameters as initial value.
         We use scipy.optimize.minimize and use sensible bounds for the
         parameters.
         """
-        startparameters = self.convert_startdict(startdict)
+        startparameters = self._parameters
         if constrained:
-            bounds=[(0,None), (0,None)]
-            method='L-BFGS-B'
+            bounds = [(0, None), (0, None)]
+            method = 'L-BFGS-B'
         else:
-            bounds=[(None,None), (None,None)]
-            method='BFGS'
+            bounds = [(None, None), (None, None)]
+            method = 'BFGS'
 
-        fit_results=minimize(self._calc_residuals, startparameters,
-                method=method,
-                bounds=bounds)
+        fit_results = minimize(self._calc_residuals, startparameters,
+                               method=method,
+                               bounds=bounds)
 
-        self._parameters=fit_results.x
-        self.fit=self.calc_modelfunction(self._parameters)
+        self._parameters = fit_results.x
+        self.fit = self.calc_modelfunction(self._parameters)
+        self._fitted = fit_results.success
+
+        print "Fit returned {} and yielded the parameters {}".format(fit_results.success,fit_results.x)
 
         return fit_results.success
 
