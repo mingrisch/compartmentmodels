@@ -21,13 +21,19 @@ Installation and development
 A virtual environment is useful for installing this package.
 Currently, we need numpy, scipy and pytest. Quite possibly, more dependencies will arise.
 
-After checking out and installing the required dependencies, it may be helpful (and possibly required) to install the package locally by::
+Installation:
+
+* create a virtual environment, following your preferred approach
+* clone this repository
+* install the required dependencies
+* After checking out and installing the required dependencies, it may be helpful (and possibly required) to install the package locally by:
 pip install -e .
+
 
 Features
 --------
-At the time being, this package provides a simple implementation of a one-compartment model . Currently, this module is under heavy development; development should be test-driven.
+At the time being, this package provides a simple implementation of a one-compartment model. Currently, this module is under heavy development which follows, at least in parts, a test-driven approach.
 
-
-
-* TODO
+Next milestone
+---------
+The next (and first) milestone is to reach a working implementation that does not depend on external numeric packages.
