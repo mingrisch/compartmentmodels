@@ -1,7 +1,7 @@
 # cython: profile=True
 import numpy as np
 import scipy as sp
-# from scipy import optimize, signal
+from scipy import optimize, signal
 
 
 class GenericModel:
@@ -46,6 +46,9 @@ class GenericModel:
         do we have cython, or use it?
 
 
+    _fitted: bool
+        has a fit been performed?
+
     readable_parameters: dict
         Dictionary of readable parameters
 
@@ -64,8 +67,10 @@ class GenericModel:
         self.fit = sp.zeros_like(curve)
         self.aic = 0.0
         self.rc = 0
-        self.parameters = []
+        self._parameters = np.zeros(2)
+
         self._cythonavailable = False
+        self._fitted=False
 
         # needed for calculation of the Akaike information criterion:
         self.nooffreeparameters = 2
@@ -102,9 +107,9 @@ class GenericModel:
         and the corresponding transit time. Derived models will likely have to
         override this method.  """
 
-        FP = self.parameters[0] * 6000.
-        VP = self.parameters[0] / self.parameters[1] * 100
-        TP = 1 / self.parameters[1]
+        FP = self._parameters[0] * 6000.
+        VP = self._parameters[0] / self._parameters[1] * 100
+        TP = 1 / self._parameters[1]
         self.readable_parameters["F"] = FP
         self.readable_parameters["v"] = VP
         self.readable_parameters["MTT"] = TP
@@ -112,7 +117,7 @@ class GenericModel:
         return self.readable_parameters
 
     def get_raw_parameters(self):
-        return self.parameters
+        return self._parameters
 
     def get_aif(self):
         return self.aif
@@ -131,7 +136,7 @@ class GenericModel:
 
     # set functions:
     def set_parameters(self, newparameters):
-        self.parameters = newparameters
+        self._parameters = newparameters
 
     def set_time(self, newtime):
         self.time = newtime
@@ -208,8 +213,40 @@ class GenericModel:
 
         return integral
 
+    def calc_modelfunction(self, parameters):
+        """ Calculate the model curve for given parameters
+
+        Paraemters
+        ----------
+        parameters: numpy.ndarray
+            model parameters
+
+        Returns:
+        --------
+        np.ndarray
+            an array with the model values
+
+        """
+        modelcurve=parameters[0] * self.convolution_w_exp(parameters[1])
+
+        return modelcurve
+
+    def _calc_residuals(self, parameters):
+        """ Wrapper around calc_modelfunction
+
+        This function wraps around the model function so that it can be called
+        from scipy.optimize.minimize, i.e. it accepts an array of fit parameters and
+        returns a scalar, the sum of squared residuals
+        """
+
+        residuals=self.curve-self.calc_modelfunction(parameters)
+        self.residuals=residuals
+        return np.sum(residuals**2)
+
     def calc_residuals(self, parameters, fjac=None):
-        """This function calculates the residuals for a
+        """Deprecated. (was used for the mpfit fitting).
+        
+        This function calculates the residuals for a
         one-compartment model with residual function
         p[0]*exp(-t*p[1]).  self.residuals is set to the resulting
         array, furthermore, the sum of resulting array is returned.  Note:
@@ -241,39 +278,29 @@ class GenericModel:
 
     def fit_model(self, startdict,
                   constrained=True):
-        """this function attempts to fit the model to the curve, using
-        the startparameters as initial value.  on return, self.rc
-        contains the return parameter of the leastsq routine, and
-        self.parameters is set to the parameter estimates, self. fit
-        is set to the estimated model curve.  after fitting, the
-        method get_aic() is available to calculate the Akaike
-        information criterion."""
+        """ Perform the model fitting. 
+        
+        this function attempts to fit the model to the curve, using
+        the startparameters as initial value.
+        We use scipy.optimize.minimize and use sensible bounds for the
+        parameters.
+        """
         startparameters = self.convert_startdict(startdict)
+        if constrained:
+            bounds=[(0,None), (0,None)]
+            method='L-BFGS-B'
+        else:
+            bounds=[(None,None), (None,None)]
+            method='BFGS'
 
-        # set up the parinfo-list of dictionaries. this is necessary if
-        # we wish to constrain all parameters to positive values.
-        npar = len(startparameters)
-        parinfo = [{'value': startparameters[i],
-                    'limited':[constrained, False],
-                    'limits':[1.0e-7, 1]}
-                   for i in range(npar)]
+        fit_results=minimize(self._calc_residuals, startparameters,
+                method=method,
+                bounds=bounds)
 
-        # we need an additional constraint for the temporal parameters
-        mp = mpfit(
-            self.calc_residuals, startparameters, parinfo=parinfo, quiet=1)
-        # print "Status :%d" % mp.status
-        # print "Params :", mp.params
-        # print mp.errmsg
+        self._parameters=fit_results.x
+        self.fit=self.calc_modelfunction(self._parameters)
 
-        self.parameters = mp.params
-        # print "Fitting results:" ,self.parameters
-        # print "Other stuff: ", fit_results
-        # print "Status message: ", mesg
-        # print "Return code : ", ier
-        self.rc = mp.status
-        self.fit = self.curve - self.calc_residuals(self.parameters)[1]
-
-        return
+        return fit_results.success
 
     def get_AIC(self):
         """this method returns the corrected Akaike information
