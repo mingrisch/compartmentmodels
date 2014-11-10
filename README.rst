@@ -21,12 +21,13 @@ Installation and development
 A virtual environment is useful for installing this package.
 Currently, we need numpy, scipy and pytest. Quite possibly, more dependencies will arise.
 
-After checking out and installing the required dependencies, it may be possibly to install the package locally by::
+After checking out and installing the required dependencies, it may be helpful (and possibly required) to install the package locally by::
 pip install -e .
 
 Features
 --------
-At the time being, this package provides a simple implementation of a one-compartment model . Currently, this module is under heavy development and will follow a test-driven development approach. 
+At the time being, this package provides a simple implementation of a one-compartment model . Currently, this module is under heavy development; development should be test-driven.
+
 
 
 * TODO
