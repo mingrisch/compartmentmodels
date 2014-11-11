@@ -33,7 +33,10 @@ def preparedmodel():
 
 
 def test_genericModel_has_string_representation(model):
-    assert model.__str__() == "Generic model"
+    str_rep=model.__str__()
+    
+    assert str_rep # an empty string is False, all others are True
+
 
 
 def test_genericModel_set_and_get_time(model):
@@ -80,6 +83,27 @@ def test_genericModel_python_convolution(model):
                                       verbose=False)
 
 
+
+def test_genericModel_convolution_with_exponential_zero(preparedmodel):
+    """ Convolution with an exponential with time constant zero.
+
+    the default implementation will crash here
+    """
+    int_vector=preparedmodel.intvector()
+    conv_w_zero=preparedmodel.convolution_w_exp(0.0)
+
+    np.testing.assert_array_equal(int_vector, conv_w_zero)
+
+def test_genericModel_fftconvolution_with_exponential_zero(preparedmodel):
+    """ Convolution with an exponential with time constant zero.
+
+    the default implementation will crash here
+    """
+    int_vector=preparedmodel.intvector()
+    conv_w_zero=preparedmodel.convolution_w_exp(0.0, fftconvolution=True)
+
+    np.testing.assert_array_equal(int_vector, conv_w_zero)
+    
 def test_genericModel_cpython_vs_fft_convolution(model):
     """ TEst whether a fft convolution yields the same result as the cpython
     implementation of the discrete convolution
@@ -199,4 +223,3 @@ def test_genericModel_fit_model_determines_right_parameters(preparedmodel):
     return_value = preparedmodel.fit_model(np.asarray([1.,2.]))
 
     assert np.allclose(preparedmodel._parameters, start_parameters)
-

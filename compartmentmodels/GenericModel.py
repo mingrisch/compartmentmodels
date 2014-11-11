@@ -183,6 +183,10 @@ class GenericModel:
         # todo: check for lamda == zero: in this case, convolve with
         # constant, i.e. intvector.
 #        y=cy_conv_exp(list(self.time),list(self.curve),list(self.aif),tau)
+        if lamda == 0:
+        # in this case, we do convolution with a constant, i.e. we call
+         # self.intvector
+            return self.intvector()
         if fftconvolution:
             # calculate the convolution via fft
             expon = np.exp(-lamda * self.time)
@@ -201,6 +205,7 @@ class GenericModel:
             pass
             # y = cy_conv_exp(self.time, self.curve, self.aif, lamda)
         else:
+
             # calculate the discrete convolution in pure python
 
             # for i in range(1,N):
