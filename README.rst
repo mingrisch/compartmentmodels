@@ -16,7 +16,7 @@ Some kinetic models for DCE MRI
 
 * Free software: BSD license
 
-Installation and development
+Installation 
 ----------
 A virtual environment is useful for installing this package.
 Currently, we need numpy, scipy and pytest. Quite possibly, more dependencies will arise.
@@ -25,10 +25,21 @@ Installation:
 
 * create a virtual environment, following your preferred approach
 * clone this repository
-* install the required dependencies
-* After checking out and installing the required dependencies, it may be helpful (and possibly required) to install the package locally by:
-pip install -e .
+* install the required dependencies: pip install -r requirements.txt
+* After checking out and installing the required dependencies, it may be helpful (and possibly required) to install the package locally by: pip install -e .
 
+Development
+---------
+
+* Look for an issue that needs to be adressed
+
+* write a test for this issue in the tests/ directory (hint: simply extend tests/test_genericmodel.py)
+
+* Run the tests: py.test
+  
+* modify the code until the test passes
+
+* and commit 
 
 Features
 --------

@@ -35,22 +35,22 @@ class GenericModel:
     aic: float
         Akaike information criterion, after a fit
 
-    rc: int
-        return code of the fit routine
-
-    parameters: np.ndarray
-        array of raw parameters
-        todo: should be changed to _parameters, only internal us
+    _parameters: np.ndarray
+        array of raw parameters, used internally for the calculation of model
+        fits
 
     _cython_available: bool
         do we have cython, or use it?
+        Currently, cython is not used, but this may change. 
 
 
     _fitted: bool
         has a fit been performed?
 
     readable_parameters: dict
-        Dictionary of readable parameters
+        Dictionary of physiological parameters. These can be used as start
+        parameters for the fit, and are calculated from self._parameters after
+        a successfull fit
 
 
 
@@ -67,7 +67,6 @@ class GenericModel:
         self.residuals = curve
         self.fit = sp.zeros_like(curve)
         self.aic = 0.0
-        self.rc = 0
         self._parameters = np.zeros(2)
 
         self._cythonavailable = False
@@ -83,7 +82,7 @@ class GenericModel:
         self._parameters=self.convert_startdict(startdict)
 
     def __str__(self):
-        return "Generic model"
+        return "Base class for compartment models."
 
     # get functions
     def get_parameters(self):
@@ -138,6 +137,11 @@ class GenericModel:
 
     # set functions:
     def set_parameters(self, newparameters):
+        """
+        I am not sure whether this function should even exist.
+
+        self._parameters should only be calculated internally.
+        """
         self._parameters = newparameters
 
     def set_time(self, newtime):
@@ -151,9 +155,30 @@ class GenericModel:
 
     # convolution of aif with an exponential
     def convolution_w_exp(self, lamda, fftconvolution=False):
-        """ returns the convolution of self.aif with an exponential
-         exp(-lamda*t). we follow the notation introduced in
-        http://edoc.ub.uni-muenchen.de/14951/
+        """ Convolution of self.aif with an exponential.
+
+        This function returns the convolution of self.aif with an exponential
+        exp(-lamda*t). Currently, two implementations are available: per
+        default, we calculate the convolution analytically with a linearly
+        interpolated AIF, following the notation introduced in
+        http://edoc.ub.uni-muenchen.de/14951/. Alternatively, convolution via
+        fft can be used. Currently, the tests for the FFT convolution that
+        compare FFT to standard convolution fail. Presumably, the reason is
+        the difference between sinc-interpolation (by FFT) and linear
+        interpolation.
+
+        Parameters
+        ----------
+        lamda: float
+            constant in the exponential exp(-lamda*self.time)
+
+        fftconvolution: bool, optional
+            Should the convolution be calculated with FFT? Default is false.
+
+        Returns
+        -------
+        np.array
+            an array with the result of the convolution.
         """
         # todo: check for lamda == zero: in this case, convolve with
         # constant, i.e. intvector.
