@@ -1,4 +1,3 @@
-# cython: profile=True
 import numpy as np
 import scipy as sp
 from scipy.optimize import minimize
@@ -58,7 +57,7 @@ class GenericModel:
     """
 
     def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1),
-            startdict={'F': 50.0, 'v': 12.2}):
+                 startdict={'F': 50.0, 'v': 12.2}):
         # todo: typecheck for time, curve, aif
         # they should be numpy.ndarrays with the same size and dtype float
         self.time = time
@@ -72,14 +71,16 @@ class GenericModel:
         self._cythonavailable = False
         self._fitted = False
 
-        # needed for calculation of the Akaike information criterion:
-        self.nooffreeparameters = 2
-
+        # Perform convolution using fft or linear interpolation?
+        self.fft = False 
         # this dictionary will contain human-readable (parameter,value) entries
-        self.readable_parameters =  startdict
+        self.readable_parameters = startdict
+
+        # this will store the OptimizeResult object
+        self.OptimizeResult = None
 
         # convert the dictionary entry to 'raw' parameters:
-        self._parameters=self.convert_startdict(startdict)
+        self._parameters = self.convert_startdict(startdict)
 
     def __str__(self):
         return "Base class for compartment models."
@@ -115,24 +116,34 @@ class GenericModel:
         self.readable_parameters["v"] = VP
         self.readable_parameters["MTT"] = TP
 
+        if self._fitted:
+            self.readable_parameters["Iterations"] = self.OptimizeResult.nit
+
         return self.readable_parameters
 
     def get_raw_parameters(self):
+        # this should be done differently. look into numpy
+        print "Deprecation warning: this function is deprecated and will be removed"
         return self._parameters
 
     def get_aif(self):
+        print "Deprecation warning: this function is deprecated and will be removed"
         return self.aif
 
     def get_curve(self):
+        print "Deprecation warning: this function is deprecated and will be removed"
         return self.curve
 
     def get_time(self):
+        print "Deprecation warning: this function is deprecated and will be removed"
         return self.time
 
     def get_residuals(self):
+        print "Deprecation warning: this function is deprecated and will be removed"
         return self.residuals
 
     def get_fit(self):
+        print "Deprecation warning: this function is deprecated and will be removed"
         return self.fit
 
     # set functions:
@@ -142,15 +153,19 @@ class GenericModel:
 
         self._parameters should only be calculated internally.
         """
+        print "Deprecation warning: this function is deprecated and will be removed"
         self._parameters = newparameters
 
     def set_time(self, newtime):
+        print "Deprecation warning: this function is deprecated and will be removed"
         self.time = newtime
 
     def set_curve(self, newcurve):
+        print "Deprecation warning: this function is deprecated and will be removed"
         self.curve = newcurve
 
     def set_aif(self, newaif):
+        print "Deprecation warning: this function is deprecated and will be removed"
         self.aif = newaif
 
     # convolution of aif with an exponential
@@ -184,7 +199,7 @@ class GenericModel:
         # constant, i.e. intvector.
 #        y=cy_conv_exp(list(self.time),list(self.curve),list(self.aif),tau)
         if lamda == 0:
-        # in this case, we do convolution with a constant, i.e. we call
+            # in this case, we do convolution with a constant, i.e. we call
          # self.intvector
             return self.intvector()
         if fftconvolution:
@@ -259,7 +274,7 @@ class GenericModel:
             an array with the model values
 
         """
-        modelcurve = parameters[0] * self.convolution_w_exp(parameters[1])
+        modelcurve = parameters[0] * self.convolution_w_exp(parameters[1], fftconvolution=self.fft)
 
         return modelcurve
 
@@ -269,6 +284,16 @@ class GenericModel:
         This function wraps around the model function so that it can be called
         from scipy.optimize.minimize, i.e. it accepts an array of fit parameters and
         returns a scalar, the sum of squared residuals
+
+        Parameters
+        ---------
+        parameters:
+            raw parameters, e.g. self_parameters
+
+        Returns
+        -------
+        double
+            sum of squared residuals
         """
 
         residuals = self.curve - self.calc_modelfunction(parameters)
@@ -287,7 +312,7 @@ class GenericModel:
         fortran. For now, we're happy with this implementation """
 
         residuals = self.curve - \
-            (parameters[0] * self.convolution_w_exp(parameters[1]))
+            (parameters[0] * self.convolution_w_exp(parameters[1],  fftconvolution=self.fft))
         self.residuals = residuals
         status = 0
         # return squared sum of res.
@@ -299,6 +324,16 @@ class GenericModel:
         calculate start values for the fitting. Save them in an array
         as required by calc_residuals. This function is meant to be
         implemented by each model.
+        
+        Parameters:
+        ----------
+        startdict: Dictionary
+            Dictionary containing the initial values for the model parameters 
+
+        Returns:
+        -------
+        np.ndarray: 
+            array containing the raw model parameters 
         """
         if not type(startdict).__name__ == 'dict':
             return
@@ -309,14 +344,31 @@ class GenericModel:
         return np.asarray([FP, lamda])
 
     def fit_model(self, startdict,
-                  constrained=True):
+            constrained=True, fft=False):
         """ Perform the model fitting. 
 
         this function attempts to fit the model to the curve, using
         the startparameters as initial value.
         We use scipy.optimize.minimize and use sensible bounds for the
         parameters.
+
+        Parameters:
+        ----------
+        startdict: dictionary
+            Dictionary with initial values
+        constrained: bool
+            Perform fitting with or without positivity constraints (default True)
+        fft: bool
+            use fft for the calculation of the convolution (default False)
+                    
+        Returns:
+        -------
+        bool
+            Fit successful?
         """
+        self._fitted=False
+        self.fft=fft
+        self.OptimizeResult=None
         startparameters = self._parameters
         if constrained:
             bounds = [(0, None), (0, None)]
@@ -330,10 +382,12 @@ class GenericModel:
                                bounds=bounds)
 
         self._parameters = fit_results.x
+        # store the Optimize Result, in case we need it later on
+        self.OptimizeResult= fit_results
         self.fit = self.calc_modelfunction(self._parameters)
         self._fitted = fit_results.success
 
-        print "Fit returned {} and yielded the parameters {}".format(fit_results.success,fit_results.x)
+        print "Fit returned {} and yielded the parameters {}".format(fit_results.success, fit_results.x)
 
         return fit_results.success
 
@@ -341,13 +395,15 @@ class GenericModel:
         """this method returns the corrected Akaike information
         criterion (Glatting 07).  It is only available after a
         successful fit"""
-        if self.rc > 0:
+        if self._fitted:
             n = self.fit.size
+            npar = len(self._parameters)
+
             aic = n * sp.log(sp.sum(sp.square(self.residuals)) / n)
-            +2 * (self.nooffreeparameters + 1)
-            +2 * (self.nooffreeparameters + 1) * \
-                (self.nooffreeparameters + 2) / \
-                (n - self.nooffreeparameters - 2)
+            +2 * (npar + 1)
+            +2 * (npar + 1) * \
+                (npar + 2) / \
+                (n - npar - 2)
             return aic
         else:
             return False
@@ -376,41 +432,38 @@ if __name__ == '__main__':
     recirculation2 = sp.roll(recirculation2, 20 * 4)
     recirculation2[0:20 * 4] = 0
     aif = aif + recirculation1 + recirculation2
-    gptmp.set_aif(aif)
+    gptmp.aif=aif
 
-    startdict = {"FP": 45.0, "VP": 10.0}
-    true_parameters = gptmp.convert_startdict(startdict)
+    true_values = {"F": 45.0, "v": 10.0}
+    true_parameters = gptmp.convert_startdict(true_values)
     curve = true_parameters[0] * gptmp.convolution_w_exp(true_parameters[1])
     max_curve = sp.amax(curve)
-    noise = 0.05 * max_curve * (sp.rand(npt) - 0.5)
+    # to do: what the hell is this:
+    noise = 0.08 * max_curve * (sp.rand(npt) - 0.5)
     curve = curve + noise
 # ____ end of input calculations
 
     # set up the generic model object.
-    gp = GenericModel()
-    gp.set_time(time)
-    gp.set_curve(curve)
-    gp.set_aif(aif)
-    # initial parameters for the fit
-    start_parameters = sp.array([80. / 6000, 7.])
-    startdict = {"FP": 50.0, "VP": 12.0}
+    gp = GenericModel(time=time, curve=curve, aif=aif)
+    initial_values = {"FP": 50.0, "VP": 12.0}
 
     # fit the model to the curve
-    gp.fit_model(startdict)
-    # text output
+    gp.fit_model(initial_values)
+    results_std_conv = gp.get_parameters()
 
-    print 'True parameters: ', true_parameters
-    print 'Initial parameters: ', start_parameters
-    print 'Estimated parameters: '
+    # fit the model to the curve, using fftconvolution
+    gp.fit_model(initial_values, fft=True)
 
-    pardict = gp.get_parameters()
-    for k, v in pardict.items():
-        print k, v
-    print 'AIC: ',  gp.get_AIC()
+    results_fft_conv = gp.get_parameters()
+
+    for p in ['F', 'v', 'MTT', 'Iterations']:
+        print 'True value of {}: {}'.format(p, true_values.get(p))
+        print 'Fit results std. conv {}: {}'.format(p, results_std_conv.get(p))
+        print 'Fit results fft. conv {}: {}'.format(p, results_fft_conv.get(p))
 
     # graphical output
-    pylab.plot(gp.get_time(), gp.get_curve(), 'bo')
-    pylab.plot(gp.get_time(), gp.get_fit(), 'g-')
+    pylab.plot(gp.time, gp.curve, 'bo')
+    pylab.plot(gp.time, gp.fit, 'g-')
     pylab.title("One compartment fit")
     pylab.xlabel("time [s]")
     pylab.ylabel("concentration [a.u.]")
