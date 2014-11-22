@@ -5,7 +5,7 @@ import scipy as sp
 from scipy.optimize import minimize
 
 
-class GenericModel:
+class CompartmentModel:
 
     """This is a base class for all models. It provides the general
     framework and contains a fit function for a simple one compartment
@@ -424,7 +424,7 @@ if __name__ == '__main__':
     curve = aif * 0.0
     # aif=aif.astype('float64')
     # curve=curve.astype('float64')
-    gptmp = GenericModel(time, curve, aif)
+    gptmp = CompartmentModel(time, curve, aif)
 
     # generate an aif with recirculation:
     recirculation1 = gptmp.convolution_w_exp(1. / 8.) / 8
@@ -446,7 +446,7 @@ if __name__ == '__main__':
 # ____ end of input calculations
 
     # set up the generic model object.
-    gp = GenericModel(time=time, curve=curve, aif=aif)
+    gp = CompartmentModel(time=time, curve=curve, aif=aif)
     initial_values = {"FP": 50.0, "VP": 12.0}
 
     # fit the model to the curve
