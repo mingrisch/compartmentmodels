@@ -74,7 +74,7 @@ class CompartmentModel:
         self._fitted = False
 
         # Perform convolution using fft or linear interpolation?
-        self.fft = False 
+        self.fft = False
         # this dictionary will contain human-readable (parameter,value) entries
         self.readable_parameters = startdict
 
@@ -111,12 +111,12 @@ class CompartmentModel:
         and the corresponding transit time. Derived models will likely have to
         override this method.  """
 
-        FP = self._parameters[0] * 6000.
-        VP = self._parameters[0] / self._parameters[1] * 100
-        TP = 1 / self._parameters[1]
-        self.readable_parameters["F"] = FP
-        self.readable_parameters["v"] = VP
-        self.readable_parameters["MTT"] = TP
+        F = self._parameters[0] * 6000.
+        v = self._parameters[0] / self._parameters[1] * 100
+        mtt = 1 / self._parameters[1]
+        self.readable_parameters["F"] = F
+        self.readable_parameters["v"] = v
+        self.readable_parameters["MTT"] = mtt
 
         if self._fitted:
             self.readable_parameters["Iterations"] = self.OptimizeResult.nit
@@ -124,7 +124,7 @@ class CompartmentModel:
         return self.readable_parameters
 
     def get_raw_parameters(self):
-        # this should be done differently. look into numpy
+        # I don't think we ever need this function.
         print "Deprecation warning: this function is deprecated and will be removed"
         return self._parameters
 
@@ -276,7 +276,8 @@ class CompartmentModel:
             an array with the model values
 
         """
-        modelcurve = parameters[0] * self.convolution_w_exp(parameters[1], fftconvolution=self.fft)
+        modelcurve = parameters[
+            0] * self.convolution_w_exp(parameters[1], fftconvolution=self.fft)
 
         return modelcurve
 
@@ -314,7 +315,8 @@ class CompartmentModel:
         fortran. For now, we're happy with this implementation """
 
         residuals = self.curve - \
-            (parameters[0] * self.convolution_w_exp(parameters[1],  fftconvolution=self.fft))
+            (parameters[
+             0] * self.convolution_w_exp(parameters[1],  fftconvolution=self.fft))
         self.residuals = residuals
         status = 0
         # return squared sum of res.
@@ -326,7 +328,7 @@ class CompartmentModel:
         calculate start values for the fitting. Save them in an array
         as required by calc_residuals. This function is meant to be
         implemented by each model.
-        
+
         Parameters:
         ----------
         startdict: Dictionary
@@ -346,7 +348,7 @@ class CompartmentModel:
         return np.asarray([FP, lamda])
 
     def fit_model(self, startdict,
-            constrained=True, fft=False):
+                  constrained=True, fft=False):
         """ Perform the model fitting. 
 
         this function attempts to fit the model to the curve, using
@@ -362,16 +364,21 @@ class CompartmentModel:
             Perform fitting with or without positivity constraints (default True)
         fft: bool
             use fft for the calculation of the convolution (default False)
-                    
+
         Returns:
         -------
         bool
             Fit successful?
         """
-        self._fitted=False
-        self.fft=fft
-        self.OptimizeResult=None
+        self._fitted = False
+        self.fft = fft
+        self.OptimizeResult = None
         startparameters = self._parameters
+
+        # to do: maybe bounds should really be self.bounds. This has the
+        # advantage that derived classes need not reimplement fit_model. Also,
+        # this appears more logical.
+
         if constrained:
             bounds = [(0, None), (0, None)]
             method = 'L-BFGS-B'
@@ -385,7 +392,7 @@ class CompartmentModel:
 
         self._parameters = fit_results.x
         # store the Optimize Result, in case we need it later on
-        self.OptimizeResult= fit_results
+        self.OptimizeResult = fit_results
         self.fit = self.calc_modelfunction(self._parameters)
         self._fitted = fit_results.success
 
@@ -409,6 +416,110 @@ class CompartmentModel:
             return aic
         else:
             return False
+    
+    def bootstrap(self, n=500):
+        """ Bootstrap the parameter estimates after a successful fit.
+
+        Parameters:
+        ----------
+        n : int
+            Number of bootstrap runs. Defaults to 500
+
+        Returns:
+        -------
+        This needs to be discussed. Set the parameter dictionary appropriately?
+        Store the bootstrap estimates internally in the class? 
+        """
+
+        if not self._fitted:
+            return None
+
+
+        pass
+
+        
+
+
+class CompartmentUptakeModel(CompartmentModel):
+
+    """ A compartment uptake model, as in the Sourbron/Buckley paper.
+
+    This class is derived from the Compartment Model
+
+    Attributes
+    ----------
+
+    time: np.ndarray
+        the time axis
+
+    aif: np.ndarray:
+        the arterial input function
+
+    curve: np.ndarray
+        the (measured) curve to which the model should be fitted
+
+    residuals: np.ndarray
+        residual vector after a fit
+
+    fit: np.ndarray
+        the curve as described by the model (after a fit)
+
+    aic: float
+        Akaike information criterion, after a fit
+
+    _parameters: np.ndarray
+        array of raw parameters, used internally for the calculation of model
+        fits
+
+    _cython_available: bool
+        do we have cython, or use it?
+        Currently, cython is not used, but this may change. 
+
+
+    _fitted: bool
+        has a fit been performed?
+
+    readable_parameters: dict
+        Dictionary of physiological parameters. These can be used as start
+        parameters for the fit, and are calculated from self._parameters after
+        a successfull fit
+
+
+
+
+    """
+
+    def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1),
+                 startdict={'Fp': 50.0, 'v': 12.2, 'PS': 2.1}):
+        # call __super__.__init__, with the appropriate parameters.
+
+        # A lot of this can simply be copied from previous implementations.
+
+        # Nevertheless, we do this strictly test-driven.
+
+        # other initializations:
+
+        # functions to override:
+        pass
+
+    def calc_modelfunction(self, parameters):
+        pass
+
+    def _calc_residuals(self, parameters):
+        # in fact, this does not need to be redefined
+        pass
+
+    def convert_startdict(self, startdict):
+        # this needs to be redefined
+        pass
+
+    def get_parameters(self):
+        # this needs to be reimplemented.
+
+        # Also convert_startdict and get_parameters are, in fact, getters and
+        # setters. Maybe the should be renamed in a more consistent fashion.
+        pass
+
 
 
 if __name__ == '__main__':
@@ -434,7 +545,7 @@ if __name__ == '__main__':
     recirculation2 = sp.roll(recirculation2, 20 * 4)
     recirculation2[0:20 * 4] = 0
     aif = aif + recirculation1 + recirculation2
-    gptmp.aif=aif
+    gptmp.aif = aif
 
     true_values = {"F": 45.0, "v": 10.0}
     true_parameters = gptmp.convert_startdict(true_values)
