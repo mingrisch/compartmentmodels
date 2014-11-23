@@ -4,12 +4,12 @@ import numpy as np
 
 
 
-# set up a fixture for the Generic model
+# set up a fixture for the Compartment model
 
 @pytest.fixture(scope='module')
 def model():
-    from compartmentmodels.GenericModel import GenericModel
-    model = GenericModel()
+    from compartmentmodels.compartmentmodels import CompartmentModel
+    model = CompartmentModel()
     return model
 
 
@@ -18,13 +18,13 @@ def preparedmodel():
     """ prepare a model instance with startdict, time, aif and curve, ready for fitting
     """
 
-    from compartmentmodels.GenericModel import GenericModel
+    from compartmentmodels.compartmentmodels import CompartmentModel
     startdict = {'F': 51.0, 'v': 11.2}
 
     time = np.linspace(0, 50, 100)
     aif = np.zeros_like(time)
     aif[(time > 5) & (time < 10)] = 1.0
-    model = GenericModel(
+    model = CompartmentModel(
         time=time, curve=np.zeros_like(time), aif=aif, startdict=startdict)
     # calculate a model curve
     model.curve = model.calc_modelfunction(model._parameters)
