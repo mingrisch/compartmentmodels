@@ -5,7 +5,7 @@ compartmentmodels
 .. image:: https://badge.fury.io/py/compartmentmodels.png
     :target: http://badge.fury.io/py/compartmentmodels
 
-.. image:: https://travis-ci.org/michimichi/compartmentmodels.png?branch=master
+.. image:: https://travis-ci.org/michimichi/compartmentmodels.png?branch=develop
         :target: https://travis-ci.org/michimichi/compartmentmodels
 
 .. image:: https://pypip.in/d/compartmentmodels/badge.png
