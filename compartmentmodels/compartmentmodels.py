@@ -72,6 +72,7 @@ class CompartmentModel:
 
         self._cythonavailable = False
         self._fitted = False
+        self._bootstrapped = False
 
         # Perform convolution using fft or linear interpolation?
         self.fft = False
@@ -83,7 +84,12 @@ class CompartmentModel:
 
         # convert the dictionary entry to 'raw' parameters:
         self._parameters = self.convert_startdict(startdict)
-
+        
+        #defy method and bounds, which fit_model will use:
+        self.constrained=False
+        self.set_constraints(self.constrained)
+   
+        
     def __str__(self):
         return "Base class for compartment models."
 
@@ -265,7 +271,7 @@ class CompartmentModel:
     def calc_modelfunction(self, parameters):
         """ Calculate the model curve for given parameters
 
-        Paraemters
+        Parameters
         ----------
         parameters: numpy.ndarray
             model parameters
@@ -281,7 +287,7 @@ class CompartmentModel:
 
         return modelcurve
 
-    def _calc_residuals(self, parameters):
+    def _calc_residuals(self, parameters, curve):
         """ Wrapper around calc_modelfunction
 
         This function wraps around the model function so that it can be called
@@ -298,10 +304,21 @@ class CompartmentModel:
         double
             sum of squared residuals
         """
-
-        residuals = self.curve - self.calc_modelfunction(parameters)
+        
+        residuals = curve - self.calc_modelfunction(parameters)
         self.residuals = residuals
         return np.sum(residuals ** 2)
+
+    def _calc_residuals_bootstrap(self, parameters):
+        """same as the above but instead of the input curve,
+        it subtracs from the new calculated curve by bootstrap(self).
+        
+        deprecated - not needed anymore
+        """
+        
+        residuals_bootstrap = self.new_curve_bootstrap - self.calc_modelfunction(parameters)
+        self.residuals_bootstrap = residuals_bootstrap
+        return np.sum(residuals_bootstrap ** 2)
 
     def calc_residuals(self, parameters, fjac=None):
         """Deprecated. (was used for the mpfit fitting).
@@ -345,9 +362,26 @@ class CompartmentModel:
         FP = startdict.get("F") / 6000.  # we need to convert to SI
         VP = startdict.get("v") / 100
         lamda = 1. / (VP / FP)
+        
+        # store the parameters in self._parameters:
+        self._parameters=np.asarray([FP, lamda])
         return np.asarray([FP, lamda])
 
-    def fit_model(self, startdict,
+    def set_constraints(self, constrained):
+        self.constrained=constrained
+        # to do: maybe bounds should really be self.bounds. This has the
+        # advantage that derived classes need not reimplement fit_model. Also,
+        # this appears more logical.
+
+        if constrained:
+            self.bounds = [(0, None), (0, None)]
+            self.method = 'L-BFGS-B'
+        else:
+            self.bounds = [(None, None), (None, None)]
+            self.method = 'BFGS'
+            
+            
+    def fit_model(self, startdict=None,
                   constrained=True, fft=False):
         """ Perform the model fitting. 
 
@@ -373,30 +407,28 @@ class CompartmentModel:
         self._fitted = False
         self.fft = fft
         self.OptimizeResult = None
-        startparameters = self._parameters
-
-        # to do: maybe bounds should really be self.bounds. This has the
-        # advantage that derived classes need not reimplement fit_model. Also,
-        # this appears more logical.
-
-        if constrained:
-            bounds = [(0, None), (0, None)]
-            method = 'L-BFGS-B'
+        # convert start dict to self._parameters
+        if startdict is None:
+            startparameters = self._parameters
         else:
-            bounds = [(None, None), (None, None)]
-            method = 'BFGS'
+            startparameters= self.convert_startdict(startdict)
+        
 
-        fit_results = minimize(self._calc_residuals, startparameters,
-                               method=method,
-                               bounds=bounds)
+        self.set_constraints(constrained)
+        
+        fit_results = minimize(self._calc_residuals, startparameters, args=(self.curve,),
+                               method=self.method,
+                               bounds=self.bounds)
 
         self._parameters = fit_results.x
+        #self._number_of_iterations = np.int(fit_results.nit)
+        
         # store the Optimize Result, in case we need it later on
         self.OptimizeResult = fit_results
         self.fit = self.calc_modelfunction(self._parameters)
         self._fitted = fit_results.success
 
-        print "Fit returned {} and yielded the parameters {}".format(fit_results.success, fit_results.x)
+        #print "Fit returned {} and yielded the parameters {}".format(fit_results.success, fit_results.x)
 
         return fit_results.success
 
@@ -417,12 +449,12 @@ class CompartmentModel:
         else:
             return False
     
-    def bootstrap(self, n=500):
+    def bootstrap(self, k=500):
         """ Bootstrap the parameter estimates after a successful fit.
 
         Parameters:
         ----------
-        n : int
+        k : int
             Number of bootstrap runs. Defaults to 500
 
         Returns:
@@ -433,9 +465,40 @@ class CompartmentModel:
 
         if not self._fitted:
             return None
-
-
-        pass
+        
+        # need to change variables for bootstrapping
+        original_curve = self.curve
+        original_fit = self.fit
+        original_parameters = self._parameters
+        original_readable_parameters= self.readable_parameters
+        
+        # set of residuals calculated for bootstrapping
+        residuals_bootstrap = (self.curve - self.fit)
+        
+        # array, which will be overwritten with the results
+        self.bootstrap_result = np.zeros((2,k))
+        
+        # bootstrapping loop
+        for i in range(k):
+            sample_index = np.random.randint(0,residuals_bootstrap.shape[0], residuals_bootstrap.shape)
+            self.curve = self.fit + residuals_bootstrap[sample_index]
+            
+            self.fit_model(self.readable_parameters)
+            
+            #add number of iterations to parameters
+            #insert = np.append(self._parameters, self._number_of_iterations)
+            #self.bootstrap_result[:,i] = insert
+            self.bootstrap_result[:,i] = self._parameters
+    
+        self.mean = self.bootstrap_result.mean(axis=1)
+        self.std = self.bootstrap_result.std(axis=1)
+        
+        #rechange again
+        self.curve= original_curve
+        self.fit = original_fit
+        self._parameters = original_parameters
+        self.readable_parameters = original_readable_parameters
+        self._bootstrapped=True
 
         
 

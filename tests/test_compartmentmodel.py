@@ -28,7 +28,7 @@ def preparedmodel():
         time=time, curve=np.zeros_like(time), aif=aif, startdict=startdict)
     # calculate a model curve
     model.curve = model.calc_modelfunction(model._parameters)
-
+    model.curve += 0.000001 * np.random.randn(len(time))
     return model
 
 
@@ -163,7 +163,7 @@ def test_genericModel_fit_model_returns_bool(preparedmodel):
     """Test whether the fit routine reports sucess of fitting
     """
 
-    return_value = preparedmodel.fit_model(np.asarray([1.,2.]))
+    return_value = preparedmodel.fit_model()
 
     assert (isinstance(return_value, bool))
 
@@ -185,13 +185,14 @@ def test_genericModel_start_parameter_conversion(preparedmodel):
 
     
 
+
 def test_genericModel_parameter_conversion(preparedmodel):
     """ check the conversions from physiological to raw, and back
     """
-
     
     original_startdict= {'F': 51.0, 'v': 11.2}
     raw_par= preparedmodel._parameters
+    
     readable_dict= preparedmodel.get_parameters()
     # test whether the dictionaries contain i) the same keys and ii) the corresponding values are equal. All keys from the start dict have to be in the output dict. Additionally, the readable_dict may contain additional keys, which are not checked.
     for key, value in original_startdict.iteritems():
@@ -223,6 +224,20 @@ def test_genericModel_fit_model_determines_right_parameters(preparedmodel):
     """
 
     start_parameters=preparedmodel._parameters
-    return_value = preparedmodel.fit_model(np.asarray([1.,2.]))
+    return_value = preparedmodel.fit_model()
 
+    #doesn't it have to be: assert np.allclose(return_value, start_parameters)??????
     assert np.allclose(preparedmodel._parameters, start_parameters)
+
+
+
+def test_compartmentmodels_bootstrapping_right_output_dimension(preparedmodel):
+    """ Is the dimension of the result_array_bootstrap equal to (2,k) 
+    and the dimension of mean.- /std.result_array_bootstrap equal to (2,)?
+    """
+    fit_result= preparedmodel.fit_model()
+    bootstrap = preparedmodel.bootstrap(k=300)
+    assert (preparedmodel.bootstrap_result.shape == (2,300))
+    assert (preparedmodel.mean.shape == (2,))
+    assert (preparedmodel.std.shape == (2,))
+    #assert np.allclose(preparedmodel.mean[:2], preparedmodel._parameters)
