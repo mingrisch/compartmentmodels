@@ -227,6 +227,8 @@ def test_genericModel_fit_model_determines_right_parameters(preparedmodel):
     return_value = preparedmodel.fit_model()
 
     #doesn't it have to be: assert np.allclose(return_value, start_parameters)??????
+    # no: return_value indicates whether teh fit was sucessfull. We compare raw parameters before and after the fit.
+    
     assert np.allclose(preparedmodel._parameters, start_parameters)
 
 
