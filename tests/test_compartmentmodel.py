@@ -28,9 +28,27 @@ def preparedmodel():
         time=time, curve=np.zeros_like(time), aif=aif, startdict=startdict)
     # calculate a model curve
     model.curve = model.calc_modelfunction(model._parameters)
-    model.curve += 0.000001 * np.random.randn(len(time))
     return model
+    
 
+@pytest.fixture(scope='module')
+def preparedmodel_noise():
+    """ prepare a model instance with startdict, time, aif and curve + additional background noise, ready for fitting
+    """
+
+    from compartmentmodels.compartmentmodels import CompartmentModel
+    startdict = {'F': 51.0, 'v': 11.2}
+
+    time = np.linspace(0, 50, 100)
+    aif = np.zeros_like(time)
+    aif[(time > 5) & (time < 10)] = 1.0
+    model = CompartmentModel(
+        time=time, curve=np.zeros_like(time), aif=aif, startdict=startdict)
+    # calculate a model curve
+    model.curve = model.calc_modelfunction(model._parameters)
+    model.curve += 0.0001 * np.random.randn(len(time))
+    return model
+    
 
 def test_genericModel_has_string_representation(model):
     str_rep=model.__str__()
@@ -226,18 +244,24 @@ def test_genericModel_fit_model_determines_right_parameters(preparedmodel):
     start_parameters=preparedmodel._parameters
     return_value = preparedmodel.fit_model()
 
-    #doesn't it have to be: assert np.allclose(return_value, start_parameters)??????
     assert np.allclose(preparedmodel._parameters, start_parameters)
 
 
 
-def test_compartmentmodels_bootstrapping_right_output_dimension(preparedmodel):
-    """ Is the dimension of the result_array_bootstrap equal to (2,k) 
-    and the dimension of mean.- /std.result_array_bootstrap equal to (2,)?
+def test_compartmentmodels_bootstrapping_right_output(preparedmodel_noise):
+    """ Is the dimension of the bootstrap_result equal to (2,k) 
+    and the dimension of mean.- /std.bootstrap_result equal to (2,)?
+    Are parameters after bootstrapping in range of about 10% compared to fitted parameters?
     """
-    fit_result= preparedmodel.fit_model()
-    bootstrap = preparedmodel.bootstrap(k=300)
-    assert (preparedmodel.bootstrap_result.shape == (2,300))
-    assert (preparedmodel.mean.shape == (2,))
-    assert (preparedmodel.std.shape == (2,))
-    #assert np.allclose(preparedmodel.mean[:2], preparedmodel._parameters)
+    preparedmodel_noise.k=300   
+    fit_result= preparedmodel_noise.fit_model()
+    bootstrap = preparedmodel_noise.bootstrap()
+    assert (preparedmodel_noise.bootstrap_result_raw.shape == (2,300))
+    assert (preparedmodel_noise.mean.shape == (3,))
+    assert (preparedmodel_noise.std.shape == (3,))
+    #assert np.allclose(preparedmodel_noise.mean, preparedmodel_noise._parameters, rtol=1e-01, atol=1e-01)
+    # calculates: absolute(a-b) <= (atol + rtol*absolute(b)) ;a,b array_like
+    
+    assert (type(preparedmodel_noise.readable_parameters) == dict)
+    assert (len(preparedmodel_noise.readable_parameters) == 7)
+    

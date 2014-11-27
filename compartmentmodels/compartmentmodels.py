@@ -70,6 +70,7 @@ class CompartmentModel:
         self.aic = 0.0
         self._parameters = np.zeros(2)
 
+        self.k = 500
         self._cythonavailable = False
         self._fitted = False
         self._bootstrapped = False
@@ -120,6 +121,8 @@ class CompartmentModel:
         F = self._parameters[0] * 6000.
         v = self._parameters[0] / self._parameters[1] * 100
         mtt = 1 / self._parameters[1]
+
+        
         self.readable_parameters["F"] = F
         self.readable_parameters["v"] = v
         self.readable_parameters["MTT"] = mtt
@@ -127,7 +130,29 @@ class CompartmentModel:
         if self._fitted:
             self.readable_parameters["Iterations"] = self.OptimizeResult.nit
 
+        
+        if self._bootstrapped:
+            # convert bootstrapped_raw to boostrapped_physiological
+            self.bootstrap_result_physiological=np.zeros((3,self.k))
+            for i in range(self.k):
+                F_physiological = self.bootstrap_result_raw[0,i] * 6000
+                v_pyhsiological = self.bootstrap_result_raw[0,i] / self.bootstrap_result_raw[1,i] * 100
+                mtt_physiological = 1 / self.bootstrap_result_raw[1,i]
+                self.bootstrap_result_physiological[:,i] = (F_physiological, v_pyhsiological, mtt_physiological)
+            
+            self.mean = self.bootstrap_result_physiological.mean(axis=1)
+            self.std = self.bootstrap_result_physiological.std(axis=1)
+            self.low = self.mean - self.std
+            self.high = self.mean + self.std
+            
+            self.readable_parameters["low estimate"] = {'F':self.low[0], 'v':self.low[1], 'mtt':self.low[2]}
+            self.readable_parameters["mean estimate"] = {'F':self.mean[0], 'v':self.mean[1], 'mtt':self.mean[2]} 
+            self.readable_parameters["high estimate"] = {'F':self.high[0], 'v':self.high[1], 'mtt':self.high[2]}                  
+
+        #print self.readable_parameters       
         return self.readable_parameters
+
+
 
     def get_raw_parameters(self):
         # I don't think we ever need this function.
@@ -309,16 +334,6 @@ class CompartmentModel:
         self.residuals = residuals
         return np.sum(residuals ** 2)
 
-    def _calc_residuals_bootstrap(self, parameters):
-        """same as the above but instead of the input curve,
-        it subtracs from the new calculated curve by bootstrap(self).
-        
-        deprecated - not needed anymore
-        """
-        
-        residuals_bootstrap = self.new_curve_bootstrap - self.calc_modelfunction(parameters)
-        self.residuals_bootstrap = residuals_bootstrap
-        return np.sum(residuals_bootstrap ** 2)
 
     def calc_residuals(self, parameters, fjac=None):
         """Deprecated. (was used for the mpfit fitting).
@@ -368,10 +383,10 @@ class CompartmentModel:
         return np.asarray([FP, lamda])
 
     def set_constraints(self, constrained):
+        """ This function sets the contraints for fitting. 
+        """
+    
         self.constrained=constrained
-        # to do: maybe bounds should really be self.bounds. This has the
-        # advantage that derived classes need not reimplement fit_model. Also,
-        # this appears more logical.
 
         if constrained:
             self.bounds = [(0, None), (0, None)]
@@ -421,8 +436,7 @@ class CompartmentModel:
                                bounds=self.bounds)
 
         self._parameters = fit_results.x
-        #self._number_of_iterations = np.int(fit_results.nit)
-        
+
         # store the Optimize Result, in case we need it later on
         self.OptimizeResult = fit_results
         self.fit = self.calc_modelfunction(self._parameters)
@@ -449,7 +463,7 @@ class CompartmentModel:
         else:
             return False
     
-    def bootstrap(self, k=500):
+    def bootstrap(self, k=None):
         """ Bootstrap the parameter estimates after a successful fit.
 
         Parameters:
@@ -466,6 +480,8 @@ class CompartmentModel:
         if not self._fitted:
             return None
         
+        if k:
+            self.k = k		
         # need to change variables for bootstrapping
         original_curve = self.curve
         original_fit = self.fit
@@ -476,31 +492,33 @@ class CompartmentModel:
         residuals_bootstrap = (self.curve - self.fit)
         
         # array, which will be overwritten with the results
-        self.bootstrap_result = np.zeros((2,k))
+        self.bootstrap_result_raw = np.zeros((2,self.k))
         
         # bootstrapping loop
-        for i in range(k):
+        for i in range(self.k):
             sample_index = np.random.randint(0,residuals_bootstrap.shape[0], residuals_bootstrap.shape)
             self.curve = self.fit + residuals_bootstrap[sample_index]
             
             self.fit_model(self.readable_parameters)
             
-            #add number of iterations to parameters
-            #insert = np.append(self._parameters, self._number_of_iterations)
-            #self.bootstrap_result[:,i] = insert
-            self.bootstrap_result[:,i] = self._parameters
+            self.bootstrap_result_raw[:,i] = self._parameters
+            #self.bootstrap_result[:,i] = self.get_parameters()['v','F']
     
-        self.mean = self.bootstrap_result.mean(axis=1)
-        self.std = self.bootstrap_result.std(axis=1)
+        #self.mean = self.bootstrap_result.mean(axis=1)
+        #self.std = self.bootstrap_result.std(axis=1)
         
-        #rechange again
+        # rechange variables
         self.curve= original_curve
         self.fit = original_fit
         self._parameters = original_parameters
         self.readable_parameters = original_readable_parameters
+        
         self._bootstrapped=True
 
-        
+        return self.get_parameters()
+        print self.get_parameters()
+        # test: does boostrap return a dictionary with appropriate keys and 3-tuples as value?
+
 
 
 class CompartmentUptakeModel(CompartmentModel):
@@ -621,7 +639,7 @@ if __name__ == '__main__':
 
     # set up the generic model object.
     gp = CompartmentModel(time=time, curve=curve, aif=aif)
-    initial_values = {"FP": 50.0, "VP": 12.0}
+    initial_values = {"F": 50.0, "v": 12.0}
 
     # fit the model to the curve
     gp.fit_model(initial_values)
@@ -630,12 +648,19 @@ if __name__ == '__main__':
     # fit the model to the curve, using fftconvolution
     gp.fit_model(initial_values, fft=True)
 
+    
     results_fft_conv = gp.get_parameters()
-
+    gp.bootstrap(10)
+    
+    print "Bootstrap estimates: "
+    results_bootstrap = gp.get_parameters()
     for p in ['F', 'v', 'MTT', 'Iterations']:
         print 'True value of {}: {}'.format(p, true_values.get(p))
         print 'Fit results std. conv {}: {}'.format(p, results_std_conv.get(p))
         print 'Fit results fft. conv {}: {}'.format(p, results_fft_conv.get(p))
+        low , med, high = results_bootstrap.get(['low estimate', 'mean estimate', 'high estimate'])
+        #http://stackoverflow.com/questions/18453566/python-dictionary-get-list-of-values-for-list-of-keys
+        print 'Bootstrap estimate {}: mean {} low {} high{}'.format(p, low.get(p), med.get(p), high.get(p))
 
     # graphical output
     pylab.plot(gp.time, gp.curve, 'bo')
