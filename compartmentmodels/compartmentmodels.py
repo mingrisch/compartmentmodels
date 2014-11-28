@@ -4,6 +4,49 @@ import numpy as np
 import scipy as sp
 from scipy.optimize import minimize
 
+# helper functions for saving and loading 'model datasets'
+
+def loaddata(filename, separator=',',comment='#'):
+    """ This function loads time, curve and AIF arrays from 
+    a textfile with the structure:
+    \# commentline (lines are ignored if they start with 'comment', 
+    default is \#)
+    time[0], curve[0], aif[0]
+    time[1], curve[1], aif[1]
+    ...
+    
+    loaddata performs sanity checks and raises a Value Error if:
+    if time, curve and aif have not the same length
+    if time is not monotonously raising
+
+
+    otherwise, the function returns a tuple (time, curve, aif)
+    """
+    try:
+        t,c,a = np.loadtxt(filename, comments=comment, 
+                        delimiter=separator,unpack=True)
+    except:
+        raise IOError
+
+    #sanity checks:
+    if (
+        (len(t) != len(a)) or 
+        (len(t)!=len(c)) or 
+        (len(a) != len(c))):
+        raise ValueError
+
+    return (t,c,a)
+
+
+
+def savedata(filename,time, curve, aif):
+    """This function saves three 1D arrays time, curve and AIF
+    into a file that complies to the format accepted by loaddata"""
+    try:
+        np.savetxt(filename, np.transpose((time,curve,aif)), delimiter=',')
+        return True
+    except:
+        return False
 
 class CompartmentModel:
 
