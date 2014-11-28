@@ -6,23 +6,33 @@ test_compartmentmodels
 ----------------------------------
 
 Tests for `compartmentmodels` module.
+
+The tests for the individual models are in separate files.
+
 """
+import pytest
+#import tempfile
+import os
+import numpy as np
 
-import unittest
-
-from compartmentmodels import compartmentmodels
 
 
-class TestCompartmentmodels(unittest.TestCase):
+from compartmentmodels.compartmentmodels import loaddata, savedata
 
-    def setUp(self):
-        pass
+def test_load_and_save(tmpdir):
+    time = np.linspace(0,100)
+    curve= np.random.randn(len(time))
+    aif = np.random.randn(len(time))
 
-    def test_something(self):
-        pass
+    filename = os.path.join(str(tmpdir), 'tempfile.tca')
+    
+   # filename = tempfile.NamedTemporaryFile() 
+    print filename
 
-    def tearDown(self):
-        pass
+    savedata(filename, time, curve, aif)
+    t, c, a = loaddata(filename)
 
-if __name__ == '__main__':
-    unittest.main()
+    assert np.all(np.equal(time, t))
+    assert np.all(np.equal(curve, c))
+    assert np.all(np.equal(aif, a))
+
