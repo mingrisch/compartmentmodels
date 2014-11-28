@@ -652,15 +652,15 @@ if __name__ == '__main__':
     results_fft_conv = gp.get_parameters()
     gp.bootstrap(10)
     
-    print "Bootstrap estimates: "
+
     results_bootstrap = gp.get_parameters()
     for p in ['F', 'v', 'MTT', 'Iterations']:
         print 'True value of {}: {}'.format(p, true_values.get(p))
         print 'Fit results std. conv {}: {}'.format(p, results_std_conv.get(p))
         print 'Fit results fft. conv {}: {}'.format(p, results_fft_conv.get(p))
-        low , med, high = results_bootstrap.get(['low estimate', 'mean estimate', 'high estimate'])
-        #http://stackoverflow.com/questions/18453566/python-dictionary-get-list-of-values-for-list-of-keys
-        print 'Bootstrap estimate {}: mean {} low {} high{}'.format(p, low.get(p), med.get(p), high.get(p))
+        
+    print "Bootstrap estimates: "        
+    print [results_bootstrap[x] for x  in ['low estimate', 'mean estimate', 'high estimate']]
 
     # graphical output
     pylab.plot(gp.time, gp.curve, 'bo')
