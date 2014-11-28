@@ -136,18 +136,24 @@ class CompartmentModel:
             self.bootstrap_result_physiological=np.zeros((3,self.k))
             for i in range(self.k):
                 F_physiological = self.bootstrap_result_raw[0,i] * 6000
-                v_pyhsiological = self.bootstrap_result_raw[0,i] / self.bootstrap_result_raw[1,i] * 100
+                v_physiological = self.bootstrap_result_raw[0,i] / self.bootstrap_result_raw[1,i] * 100
                 mtt_physiological = 1 / self.bootstrap_result_raw[1,i]
-                self.bootstrap_result_physiological[:,i] = (F_physiological, v_pyhsiological, mtt_physiological)
+                self.bootstrap_result_physiological[:,i] = (F_physiological, v_physiological, mtt_physiological)
             
-            self.mean = self.bootstrap_result_physiological.mean(axis=1)
-            self.std = self.bootstrap_result_physiological.std(axis=1)
-            self.low = self.mean - self.std
-            self.high = self.mean + self.std
+
+            self.bootstrap_percentile = np.percentile(self.bootstrap_result_physiological, [17, 50, 83], axis=1)
+            #self.mean = self.bootstrap_result_physiological.mean(axis=1)
+            #self.std = self.bootstrap_result_physiological.std(axis=1)
+            #self.low = self.mean - self.std
+            #self.high = self.mean + self.std
             
-            self.readable_parameters["low estimate"] = {'F':self.low[0], 'v':self.low[1], 'mtt':self.low[2]}
-            self.readable_parameters["mean estimate"] = {'F':self.mean[0], 'v':self.mean[1], 'mtt':self.mean[2]} 
-            self.readable_parameters["high estimate"] = {'F':self.high[0], 'v':self.high[1], 'mtt':self.high[2]}                  
+            self.readable_parameters["low estimate"] = {'F':self.bootstrap_percentile[0,0], 'v':self.bootstrap_percentile[0,1], 'MTT':self.bootstrap_percentile[0,2]}
+            self.readable_parameters["mean estimate"] = {'F':self.bootstrap_percentile[1,0], 'v':self.bootstrap_percentile[1,1], 'MTT':self.bootstrap_percentile[1,2]}
+            self.readable_parameters["high estimate"] = {'F':self.bootstrap_percentile[2,0], 'v':self.bootstrap_percentile[2,1], 'MTT':self.bootstrap_percentile[2,2]}
+            
+            #self.readable_parameters["low estimate"] = {'F':self.low[0], 'v':self.low[1], 'MTT':self.low[2]}
+            #self.readable_parameters["mean estimate"] = {'F':self.mean[0], 'v':self.mean[1], 'MTT':self.mean[2]} 
+            #self.readable_parameters["high estimate"] = {'F':self.high[0], 'v':self.high[1], 'MTT':self.high[2]}                  
 
         #print self.readable_parameters       
         return self.readable_parameters
@@ -516,7 +522,7 @@ class CompartmentModel:
         self._bootstrapped=True
 
         return self.get_parameters()
-        print self.get_parameters()
+        #print self.get_parameters()
         # test: does boostrap return a dictionary with appropriate keys and 3-tuples as value?
 
 
