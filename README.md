@@ -28,6 +28,17 @@ Installation:
 * install the required dependencies: pip install -r requirements.txt
 * After checking out and installing the required dependencies, it may be helpful (and possibly required) to install the package locally by: pip install -e .
 
+Usage
+------
+```
+import compartmentmodels.compartmentmodels as CM
+t,c,a=CM.loaddata('tests/lung.csv')
+mm=CM.CompartmentModel(time=t, curve=c, aif=a)
+mm.fit_model(startdict={'F':100., 'v':10.})
+print mm.get_parameters()
+
+
+```
 Development
 ---------
 
