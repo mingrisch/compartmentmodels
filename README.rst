@@ -1,6 +1,6 @@
 ===============================
 compartmentmodels
-===============================
+================ 
 
 .. image:: https://badge.fury.io/py/compartmentmodels.png
     :target: http://badge.fury.io/py/compartmentmodels
