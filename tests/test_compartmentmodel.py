@@ -32,6 +32,28 @@ def preparedmodel():
     
 
 @pytest.fixture(scope='module')
+def braindata():
+    """ prepare a model instance with startdict, time, aif and synthetic curve +
+    additional background noise, ready for fitting
+    """
+    from compartmentmodels.compartmentmodels import loaddata, savedata
+    from compartmentmodels.compartmentmodels import CompartmentModel
+    startdict = {'F': 51.0, 'v': 11.2}
+
+    time, aif1, aif2 =loaddata(filename='tests/cerebralartery.csv')    
+    # remove baseline signal
+    aif = aif1 - aif1[0:5].mean()
+    model = CompartmentModel(
+        time=time, curve=aif, aif=aif, startdict=startdict)
+    # calculate a model curve
+    model.curve = model.calc_modelfunction(model._parameters)
+    model.curve += 0.02 * aif.max() * np.random.randn(len(time))
+    # number of bootstraps
+    model.k=100  
+    
+    return model
+
+@pytest.fixture(scope='module')
 def realdata():
     """ prepare a model instance with startdict, time, aif and synthetic curve +
     additional background noise, ready for fitting
@@ -301,6 +323,26 @@ def test_compartmentmodels_bootstrapping_output_dimension_and_type(realdata):
             type(realdata.readable_parameters['high estimate']) == dict)
     
      
+def test_compartmentmodels_bootstrapping_output_content_braindata(braindata):    
+    """Is 'low estimate' < 'mean estimate' < 'high estimate'?
+    We investigate a cerebral aif here.
+    
+    Are fitted Parameters in between 'low estimate' and 'high estimate'?
+    """
+    fit_result= braindata.fit_model()
+    bootstrap = braindata.bootstrap()
+    assert (braindata._bootstrapped == True)
+    dict_fit={'F':braindata.readable_parameters['F'],
+                'v':braindata.readable_parameters['v'],
+                'MTT':braindata.readable_parameters['MTT']
+                }
+    assert (braindata.readable_parameters['low estimate'] <
+            braindata.readable_parameters['mean estimate'])
+    assert (braindata.readable_parameters['mean estimate'] <
+            braindata.readable_parameters['high estimate'])
+    assert (braindata.readable_parameters['low estimate'] < dict_fit)
+    assert (dict_fit < braindata.readable_parameters['high estimate'])
+
 def test_compartmentmodels_bootstrapping_output_content(realdata):    
     """Is 'low estimate' < 'mean estimate' < 'high estimate'?
     Are fittet Parameters in between 'low estimate' and 'high estimate'?

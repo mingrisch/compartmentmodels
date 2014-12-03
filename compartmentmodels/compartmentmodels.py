@@ -257,11 +257,12 @@ class CompartmentModel:
         exp(-lamda*t). Currently, two implementations are available: per
         default, we calculate the convolution analytically with a linearly
         interpolated AIF, following the notation introduced in
-        http://edoc.ub.uni-muenchen.de/14951/. Alternatively, convolution via
-        fft can be used. Currently, the tests for the FFT convolution that
-        compare FFT to standard convolution fail. Presumably, the reason is
-        the difference between sinc-interpolation (by FFT) and linear
-        interpolation.
+        http://edoc.ub.uni-muenchen.de/14951/. 
+        
+        Alternatively, convolution via fft can be used. Currently, the tests
+        for the FFT convolution that compare FFT to standard convolution fail.
+        Presumably, the reason is the difference between sinc-interpolation (by
+        FFT) and linear interpolation. 
 
         Parameters
         ----------
