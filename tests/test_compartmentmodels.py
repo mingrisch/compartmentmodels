@@ -35,3 +35,12 @@ def test_load_and_save(tmpdir):
     assert np.all(np.equal(curve, c))
     assert np.all(np.equal(aif, a))
 
+    
+
+    
+    
+    
+    
+    
+    
+    

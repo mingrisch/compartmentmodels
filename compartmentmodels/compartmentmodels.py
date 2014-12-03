@@ -38,7 +38,6 @@ def loaddata(filename, separator=',',comment='#'):
     return (t,c,a)
 
 
-
 def savedata(filename,time, curve, aif):
     """This function saves three 1D arrays time, curve and AIF
     into a file that complies to the format accepted by loaddata"""
@@ -198,7 +197,7 @@ class CompartmentModel:
             #self.readable_parameters["mean estimate"] = {'F':self.mean[0], 'v':self.mean[1], 'MTT':self.mean[2]} 
             #self.readable_parameters["high estimate"] = {'F':self.high[0], 'v':self.high[1], 'MTT':self.high[2]}                  
 
-        #print self.readable_parameters       
+        print 'readable params after bootstrap', self.readable_parameters       
         return self.readable_parameters
 
 

@@ -32,22 +32,44 @@ def preparedmodel():
     
 
 @pytest.fixture(scope='module')
-def preparedmodel_noise():
-    """ prepare a model instance with startdict, time, aif and curve + additional background noise, ready for fitting
+def realdata():
+    """ prepare a model instance with startdict, time, aif and synthetic curve +
+    additional background noise, ready for fitting
     """
-
+    from compartmentmodels.compartmentmodels import loaddata, savedata
     from compartmentmodels.compartmentmodels import CompartmentModel
     startdict = {'F': 51.0, 'v': 11.2}
 
-    time = np.linspace(0, 50, 100)
-    aif = np.zeros_like(time)
-    aif = time ** 2* np.exp(-5*time)
-    #aif[(time > 5) & (time < 10)] = 1.0
+    t,c,a=loaddata(filename='tests/lung.csv')    
+    time = t
+    aif = a
+    curve = c
+    # remove baseline signal
+    aif = aif - aif[0:5].mean()
     model = CompartmentModel(
-        time=time, curve=np.zeros_like(time), aif=aif, startdict=startdict)
+        time=time, curve=curve, aif=aif, startdict=startdict)
     # calculate a model curve
     model.curve = model.calc_modelfunction(model._parameters)
-    model.curve += 0.0051 * aif.max() * np.random.randn(len(time))
+    model.curve += 0.02 * aif.max() * np.random.randn(len(time))
+    return model
+
+@pytest.fixture(scope='module')
+def realcurve():
+    """ prepare a model instance with startdict, time, aif and real curve ready for
+    fitting
+    """
+    from compartmentmodels.compartmentmodels import loaddata, savedata
+    from compartmentmodels.compartmentmodels import CompartmentModel
+    startdict = {'F': 51.0, 'v': 11.2}
+
+    t,c,a=loaddata(filename='tests/lung.csv')    
+    time = t
+    aif = a
+    # remove baseline signal
+    curve = c - c[0:5].mean()
+    model = CompartmentModel(
+        time=time, curve=curve, aif=aif, startdict=startdict)
+    #model.curve += 0.002 * curve.max() * np.random.randn(len(time))
     return model
     
 
@@ -149,8 +171,8 @@ def do_not_test_genericModel_cpython_vs_fft_convolution(model):
         # this curve was calcualted with the cpython convolution
         curve = inarray[:, i + 2]
 
-        np.testing.assert_array_equal(model.convolution_w_exp(lam,
-                                                              fftconvolution=True), curve, verbose=False)
+        np.testing.assert_array_equal(model.convolution_w_exp(lam, fftconvolution=True),
+        curve,verbose=False)
 
 
 def do_not_test_genericModel_fftconvolution_equal_to_python_convolution(model):
@@ -170,9 +192,8 @@ def do_not_test_genericModel_fftconvolution_equal_to_python_convolution(model):
 
     for i, lam in enumerate(lamdalist):
 
-        np.testing.assert_array_equal(model.convolution_w_exp(lam,
-                                                              fftconvolution=True), model.convolution_w_exp(lam,
-                                                                                                            fftconvolution=False), verbose=False)
+        np.testing.assert_array_equal(model.convolution_w_exp(lam, fftconvolution=True),
+        model.convolution_w_exp(lam, fftconvolution=False),verbose=False)
 
 
 def test_genericModel_readableParameters_contain_all_keys(preparedmodel):
@@ -247,46 +268,96 @@ def test_genericModel_fit_model_determines_right_parameters(preparedmodel):
 
     assert np.allclose(preparedmodel._parameters, start_parameters)
 
+def test_genericModel_fit_model_determines_right_parameters(realdata):
+    """ Are the fitted parameters the same as the initial parameters?
+    This might become a longer test case...
+    """
+
+    start_parameters=realdata._parameters
+    return_value = realdata.fit_model()
+    print realdata.OptimizeResult
+    assert realdata._fitted
+    #assert np.allclose(realdata._parameters, start_parameters)
 
 
-def test_compartmentmodels_bootstrapping_output_dimension_and_type(preparedmodel_noise):
+def test_compartmentmodels_bootstrapping_output_dimension_and_type(realdata):
     """ Is the dimension of the bootstrap_result equal to (2,k) 
     and the dimension of mean.- /std.bootstrap_result equal to (2,)?
     Is the output of type dict?
     Does the output dict contain 7 elements?
     Are 'low estimate', 'mean estimate' and 'high estimate' subdicts in the output dict?
     """
-    preparedmodel_noise.k=1000   
-    fit_result= preparedmodel_noise.fit_model()
-    bootstrap = preparedmodel_noise.bootstrap()
-    assert (preparedmodel_noise.bootstrap_result_raw.shape == (2,1000))
-    #assert (preparedmodel_noise.mean.shape == (3,))
-    #assert (preparedmodel_noise.std.shape == (3,))
-    #assert np.allclose(preparedmodel_noise.mean, preparedmodel_noise._parameters, rtol=1e-01, atol=1e-01)
-    # calculates: absolute(a-b) <= (atol + rtol*absolute(b)) ;a,b array_like
+    realdata.k=100   
+    fit_result= realdata.fit_model()
+    bootstrap = realdata.bootstrap()
+    assert (realdata._bootstrapped == True)
+    assert (realdata.bootstrap_result_raw.shape == (2,100))    
+    assert (type(realdata.readable_parameters) == dict)
+    assert (len(realdata.readable_parameters) == 7)   
+    assert ('low estimate' and 'high estimate' and 'mean estimate' in 
+            realdata.readable_parameters)
+    assert (type(realdata.readable_parameters['low estimate']) == dict and 
+            type(realdata.readable_parameters['mean estimate']) == dict and
+            type(realdata.readable_parameters['high estimate']) == dict)
     
-    assert (type(preparedmodel_noise.readable_parameters) == dict)
-    assert (len(preparedmodel_noise.readable_parameters) == 7)
-    
-    assert ('low estimate' and 'high estimate' and 'mean estimate' in preparedmodel_noise.readable_parameters)
-    assert (type(preparedmodel_noise.readable_parameters['low estimate']) == dict and 
-            type(preparedmodel_noise.readable_parameters['mean estimate']) == dict and
-            type(preparedmodel_noise.readable_parameters['high estimate']) == dict)
-    
-    
-    
-    #test_compartmentmodels_bootstrapping_output_content(preparedmodel_noise):    
+     
+def test_compartmentmodels_bootstrapping_output_content(realdata):    
     """Is 'low estimate' < 'mean estimate' < 'high estimate'?
     Are fittet Parameters in between 'low estimate' and 'high estimate'?
     """
-    dict_fit={'F':preparedmodel_noise.readable_parameters['F'], 'v':preparedmodel_noise.readable_parameters['v'], 'MTT':preparedmodel_noise.readable_parameters['MTT']}
-    assert (preparedmodel_noise.readable_parameters['low estimate'] < preparedmodel_noise.readable_parameters['mean estimate'])
-    assert (preparedmodel_noise.readable_parameters['mean estimate'] < preparedmodel_noise.readable_parameters['high estimate'])
-    assert (preparedmodel_noise.readable_parameters['low estimate'] < dict_fit)
-    assert (dict_fit < preparedmodel_noise.readable_parameters['high estimate'])
+    realdata.k=1000  
+    fit_result= realdata.fit_model()
+    bootstrap = realdata.bootstrap()
+    assert (realdata._bootstrapped == True)
+    dict_fit={'F':realdata.readable_parameters['F'],
+                'v':realdata.readable_parameters['v'],
+                'MTT':realdata.readable_parameters['MTT']
+                }
+    assert (realdata.readable_parameters['low estimate'] <
+            realdata.readable_parameters['mean estimate'])
+    assert (realdata.readable_parameters['mean estimate'] <
+            realdata.readable_parameters['high estimate'])
+    assert (realdata.readable_parameters['low estimate'] < dict_fit)
+    assert (dict_fit < realdata.readable_parameters['high estimate'])
             
+
+def test_compartmentmodels_bootstrapping_output_dimension_and_type2(realcurve):
+    """ Is the dimension of the bootstrap_result equal to (2,k) 
+    and the dimension of mean.- /std.bootstrap_result equal to (2,)?
+    Is the output of type dict?
+    Does the output dict contain 7 elements?
+    Are 'low estimate', 'mean estimate' and 'high estimate' subdicts in the output dict?
+    """
+    realcurve.k=100   
+    fit_result= realcurve.fit_model()
+    bootstrap = realcurve.bootstrap()
+    assert (realcurve._bootstrapped == True)
+    assert (realcurve.bootstrap_result_raw.shape == (2,100))    
+    assert (type(realcurve.readable_parameters) == dict)
+    assert (len(realcurve.readable_parameters) == 7)   
+    assert ('low estimate' and 'high estimate' and 'mean estimate' in 
+            realcurve.readable_parameters)
+    assert (type(realcurve.readable_parameters['low estimate']) == dict and 
+            type(realcurve.readable_parameters['mean estimate']) == dict and
+            type(realcurve.readable_parameters['high estimate']) == dict)    
     
     
-    
-    
+def test_compartmentmodels_bootstrapping_output_content2(realcurve):    
+    """Is 'low estimate' < 'mean estimate' < 'high estimate'?
+    Are fittet Parameters in between 'low estimate' and 'high estimate'?
+    """
+    realcurve.k=1000  
+    fit_result= realcurve.fit_model()
+    bootstrap = realcurve.bootstrap()
+    assert (realcurve._bootstrapped == True)
+    dict_fit={'F':realcurve.readable_parameters['F'],
+                'v':realcurve.readable_parameters['v'],
+                'MTT':realcurve.readable_parameters['MTT']
+                }
+    assert (realcurve.readable_parameters['low estimate'] <
+            realcurve.readable_parameters['mean estimate'])
+    assert (realcurve.readable_parameters['mean estimate'] <
+            realcurve.readable_parameters['high estimate'])
+    assert (realcurve.readable_parameters['low estimate'] < dict_fit)
+    assert (dict_fit < realcurve.readable_parameters['high estimate'])    
     
