@@ -1,6 +1,6 @@
 ===============================
 compartmentmodels
-================ 
+===============================
 
 .. image:: https://badge.fury.io/py/compartmentmodels.png
     :target: http://badge.fury.io/py/compartmentmodels
@@ -30,15 +30,14 @@ Installation:
 
 Usage
 ------
-```
-import compartmentmodels.compartmentmodels as CM
-t,c,a=CM.loaddata('tests/lung.csv')
-mm=CM.CompartmentModel(time=t, curve=c, aif=a)
-mm.fit_model(startdict={'F':100., 'v':10.})
-print mm.get_parameters()
+Using this library is simple: ::
 
+  import compartmentmodels.compartmentmodels as CM
+  t,c,a=CM.loaddata('tests/lung.csv')
+  mm=CM.CompartmentModel(time=t, curve=c, aif=a)
+  mm.fit_model(startdict={'F':100., 'v':10.})
+  print mm.get_parameters()
 
-```
 Development
 ---------
 
