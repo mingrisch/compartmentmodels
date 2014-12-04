@@ -176,6 +176,7 @@ class CompartmentModel:
         if self._bootstrapped:
             # convert bootstrapped_raw to boostrapped_physiological
             self.bootstrap_result_physiological=np.zeros((3,self.k))
+            assert self.bootstrap_result_raw.shape[1] == self.k
             for i in range(self.k):
                 F_physiological = self.bootstrap_result_raw[0,i] * 6000
                 v_physiological = self.bootstrap_result_raw[0,i] / self.bootstrap_result_raw[1,i] * 100
@@ -196,8 +197,7 @@ class CompartmentModel:
             #self.readable_parameters["low estimate"] = {'F':self.low[0], 'v':self.low[1], 'MTT':self.low[2]}
             #self.readable_parameters["mean estimate"] = {'F':self.mean[0], 'v':self.mean[1], 'MTT':self.mean[2]} 
             #self.readable_parameters["high estimate"] = {'F':self.high[0], 'v':self.high[1], 'MTT':self.high[2]}                  
-
-        print 'readable params after bootstrap', self.readable_parameters       
+     
         return self.readable_parameters
 
 
@@ -384,24 +384,7 @@ class CompartmentModel:
         return np.sum(residuals ** 2)
 
 
-    def calc_residuals(self, parameters, fjac=None):
-        """Deprecated. (was used for the mpfit fitting).
 
-        This function calculates the residuals for a
-        one-compartment model with residual function
-        p[0]*exp(-t*p[1]).  self.residuals is set to the resulting
-        array, furthermore, the sum of resulting array is returned.  Note:
-        This function will be called from the solver quite often. For
-        ptimizing performance, someone could rewrite it in c or
-        fortran. For now, we're happy with this implementation """
-
-        residuals = self.curve - \
-            (parameters[
-             0] * self.convolution_w_exp(parameters[1],  fftconvolution=self.fft))
-        self.residuals = residuals
-        status = 0
-        # return squared sum of res.
-        return ([status, residuals])
 
     def convert_startdict(self, startdict):
         """
@@ -492,6 +475,8 @@ class CompartmentModel:
         self._fitted = fit_results.success
 
         #print "Fit returned {} and yielded the parameters {}".format(fit_results.success, fit_results.x)
+        
+        
 
         return fit_results.success
 
@@ -542,13 +527,12 @@ class CompartmentModel:
         
         # array, which will be overwritten with the results
         self.bootstrap_result_raw = np.zeros((2,self.k))
-        
         # bootstrapping loop
         for i in range(self.k):
             sample_index = np.random.randint(0,residuals_bootstrap.shape[0], residuals_bootstrap.shape)
-            self.curve = self.fit + residuals_bootstrap[sample_index]
+            self.curve = original_fit + residuals_bootstrap[sample_index]
             
-            self.fit_model(self.readable_parameters)
+            self.fit_model(original_readable_parameters)
             
             self.bootstrap_result_raw[:,i] = self._parameters
             #self.bootstrap_result[:,i] = self.get_parameters()['v','F']

@@ -350,6 +350,7 @@ def test_compartmentmodels_bootstrapping_output_content(realdata):
     realdata.k=1000  
     fit_result= realdata.fit_model()
     bootstrap = realdata.bootstrap()
+    assert (realdata.bootstrap_result_raw.shape ==(2, realdata.k))
     assert (realdata._bootstrapped == True)
     dict_fit={'F':realdata.readable_parameters['F'],
                 'v':realdata.readable_parameters['v'],
@@ -370,11 +371,11 @@ def test_compartmentmodels_bootstrapping_output_dimension_and_type2(realcurve):
     Does the output dict contain 7 elements?
     Are 'low estimate', 'mean estimate' and 'high estimate' subdicts in the output dict?
     """
-    realcurve.k=100   
+    realcurve.k=102   
     fit_result= realcurve.fit_model()
     bootstrap = realcurve.bootstrap()
     assert (realcurve._bootstrapped == True)
-    assert (realcurve.bootstrap_result_raw.shape == (2,100))    
+    assert (realcurve.bootstrap_result_raw.shape == (2,102))    
     assert (type(realcurve.readable_parameters) == dict)
     assert (len(realcurve.readable_parameters) == 7)   
     assert ('low estimate' and 'high estimate' and 'mean estimate' in 
@@ -391,7 +392,8 @@ def test_compartmentmodels_bootstrapping_output_content2(realcurve):
     realcurve.k=1000  
     fit_result= realcurve.fit_model()
     bootstrap = realcurve.bootstrap()
-    assert (realcurve._bootstrapped == True)
+    assert (realcurve._bootstrapped == True)    
+    assert (realcurve.bootstrap_result_raw.shape == (2,1000)) 
     dict_fit={'F':realcurve.readable_parameters['F'],
                 'v':realcurve.readable_parameters['v'],
                 'MTT':realcurve.readable_parameters['MTT']
