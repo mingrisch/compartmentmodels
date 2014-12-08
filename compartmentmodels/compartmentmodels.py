@@ -2,8 +2,12 @@
 
 import numpy as np
 import scipy as sp
+from scipy import stats
 from scipy.optimize import minimize
-
+import matplotlib.pyplot as plt
+import pandas as pd
+from pandas.tools.plotting import autocorrelation_plot
+import seaborn as sns
 # helper functions for saving and loading 'model datasets'
 
 def loaddata(filename, separator=',',comment='#'):
@@ -513,9 +517,9 @@ class CompartmentModel:
 
         if not self._fitted:
             return None
-        
         if k:
-            self.k = k		
+            self.k = k
+            
         # need to change variables for bootstrapping
         original_curve = self.curve
         original_fit = self.fit
@@ -525,33 +529,46 @@ class CompartmentModel:
         # set of residuals calculated for bootstrapping
         residuals_bootstrap = (self.curve - self.fit)
         
+        # adds +0.1 to the left and -0.1 to the right side of the residuals. makes it not normal distr.
+        # just for evaluation...
+        residuals_bootstrap1 = residuals_bootstrap[0:len(residuals_bootstrap)/2]+0.1
+        residuals_bootstrap2= residuals_bootstrap[len(residuals_bootstrap)/2:len(residuals_bootstrap)]-0.1
+        residuals_bootstrap=np.append(residuals_bootstrap1,residuals_bootstrap2)
+        
+        # shapiro-wilk test for normaly distributed residuals
+        w,p = sp.stats.shapiro(residuals_bootstrap)
+        print 'test statistic:',w,'p-value:', p
+        if p < 0.05:
+            raise ValueError('probably not normal distributed residuals. Try another model')
+        
+        # creates 2 plots: autocorrelation_plot by pandas and the np.correlate function, which also creates autocorrelation
+        # only for evaluation...
+        f, (ax1,ax2) = plt.subplots(1,2)
+        autocorrelation_plot(residuals_bootstrap,ax=ax1)
+        res=np.correlate(residuals_bootstrap, residuals_bootstrap, mode='full')
+        ax2.plot(res)
+        plt.show()
+        
+        
         # array, which will be overwritten with the results
         self.bootstrap_result_raw = np.zeros((2,self.k))
+        
         # bootstrapping loop
         for i in range(self.k):
             sample_index = np.random.randint(0,residuals_bootstrap.shape[0], residuals_bootstrap.shape)
             self.curve = original_fit + residuals_bootstrap[sample_index]
-            
             self.fit_model(original_readable_parameters)
-            
             self.bootstrap_result_raw[:,i] = self._parameters
-            #self.bootstrap_result[:,i] = self.get_parameters()['v','F']
-    
-        #self.mean = self.bootstrap_result.mean(axis=1)
-        #self.std = self.bootstrap_result.std(axis=1)
         
         # rechange variables
         self.curve= original_curve
         self.fit = original_fit
         self._parameters = original_parameters
         self.readable_parameters = original_readable_parameters
-        
         self._bootstrapped=True
 
         return self.get_parameters()
-        #print self.get_parameters()
-        # test: does boostrap return a dictionary with appropriate keys and 3-tuples as value?
-
+        
 
 
 class CompartmentUptakeModel(CompartmentModel):
@@ -666,7 +683,7 @@ if __name__ == '__main__':
     curve = true_parameters[0] * gptmp.convolution_w_exp(true_parameters[1])
     max_curve = sp.amax(curve)
     # to do: what the hell is this:
-    noise = 0.08 * max_curve * (sp.rand(npt) - 0.5)
+    noise = 0.08 * max_curve * (np.random.randn(len(curve)))
     curve = curve + noise
 # ____ end of input calculations
 
@@ -693,7 +710,9 @@ if __name__ == '__main__':
         print 'Fit results fft. conv {}: {}'.format(p, results_fft_conv.get(p))
         
     print "Bootstrap estimates: "        
-    print [results_bootstrap[x] for x  in ['low estimate', 'mean estimate', 'high estimate']]
+    print 'low estimate: ', results_bootstrap['low estimate']
+    print 'mean estimate:', results_bootstrap['mean estimate']
+    print 'high estimate:', results_bootstrap['high estimate']
 
     # graphical output
     pylab.plot(gp.time, gp.curve, 'bo')
