@@ -25,7 +25,7 @@ def synthetic_data(startdict = {'F': 51.0, 'v': 11.2}):
     time, curve, aif, startdict
     """
     
-    time, prebolus, mainbolus = loaddata(filename='compartmentmodels/tests/cerebralartery.csv')
+    time, prebolus, mainbolus = loaddata(filename='tests/cerebralartery.csv')
     aif=prebolus-prebolus[0:5].mean()    
     model = CompartmentModel(time=time, curve=aif, aif=aif, startdict=startdict)
     # calculate a model curve
@@ -82,7 +82,7 @@ if __name__=="__main__":
 
     # monte carlo
     pool = Pool()
-    mc_results = np.array(zip(*np.array(pool.map(montecarlo_execute_parallel, range(1000)))))   
+    mc_results = np.array(pool.map(montecarlo_execute_parallel, range(1000))).transpose()
 
     # bootstrapping
     b_results = bootstrap_distribution(time,curve,aif,startdict)
