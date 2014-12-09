@@ -531,9 +531,9 @@ class CompartmentModel:
         
         # adds +0.1 to the left and -0.1 to the right side of the residuals. makes it not normal distr.
         # just for evaluation...
-        residuals_bootstrap1 = residuals_bootstrap[0:len(residuals_bootstrap)/2]+0.1
-        residuals_bootstrap2= residuals_bootstrap[len(residuals_bootstrap)/2:len(residuals_bootstrap)]-0.1
-        residuals_bootstrap=np.append(residuals_bootstrap1,residuals_bootstrap2)
+        #residuals_bootstrap1 = residuals_bootstrap[0:len(residuals_bootstrap)/2]+0.1
+        #residuals_bootstrap2= residuals_bootstrap[len(residuals_bootstrap)/2:len(residuals_bootstrap)]-0.1
+        #residuals_bootstrap=np.append(residuals_bootstrap1,residuals_bootstrap2)
         
         # shapiro-wilk test for normaly distributed residuals
         w,p = sp.stats.shapiro(residuals_bootstrap)
@@ -545,8 +545,10 @@ class CompartmentModel:
         # only for evaluation...
         f, (ax1,ax2) = plt.subplots(1,2)
         autocorrelation_plot(residuals_bootstrap,ax=ax1)
+        ax1.set_title('pandas autocorrelation plot of residuals')
         res=np.correlate(residuals_bootstrap, residuals_bootstrap, mode='full')
         ax2.plot(res)
+        ax2.set_title('Autocorrelation of residuals with np.correlate')
         plt.show()
         
         
