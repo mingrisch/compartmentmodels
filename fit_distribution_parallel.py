@@ -73,6 +73,10 @@ def bootstrap_distribution(time, curve, aif,startdict):
     model.curve += 0.002 * aif.max() * np.random.randn(len(time))
 
     model.fit_model()
+    model.get_parameters()
+    print model.readable_parameters["F"] 
+    print model.readable_parameters["v"] 
+    print model.readable_parameters["MTT"] 
     model.bootstrap(k=1000)
     bootstrap_dist = model.bootstrap_result_physiological
     return bootstrap_dist

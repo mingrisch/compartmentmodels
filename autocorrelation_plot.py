@@ -1,5 +1,8 @@
 from compartmentmodels.compartmentmodels import *
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 
+sns.set_context('notebook')
 sns.set_style("whitegrid")
 sns.set_palette('colorblind')
 
@@ -33,25 +36,30 @@ residuals_bootstrap12=np.append(residuals_bootstrap1,residuals_bootstrap2)
 
 
 
-f, (ax1,ax2, ax3) = plt.subplots(1,3)
+f, (ax1,ax2, ax3) = plt.subplots(1,3, figsize=(12.5,5))
 
 ax1.plot(time, residuals_bootstrap, label='original residuals')
-ax1.plot(time, residuals_bootstrap12, label='changed residuals')
+ax1.plot(time, residuals_bootstrap12, label='modified residuals')
 ax1.plot(time, curve, alpha=0.3, label='curve')
 ax1.plot(time,fit, alpha=0.3, label='fit')
-ax1.set_title('curve, fit, residuals')
+ax1.set_title('Curve, fit, residuals')
 ax1.set_xlabel('time')
 ax1.set_ylabel('value')
 ax1.legend()
 
 sns.distplot(residuals_bootstrap, ax=ax2, label='original residuals')
-sns.distplot(residuals_bootstrap12, ax=ax2, label='changed residuals')
-ax2.set_title('distribution of residuals')
+sns.distplot(residuals_bootstrap12, ax=ax2, label='modified residuals')
+ax2.set_title('Distribution of residuals')
 ax2.legend()
 
 autocorrelation_plot(residuals_bootstrap,ax=ax3, label='original residuals')
-autocorrelation_plot(residuals_bootstrap12,ax=ax3, label='changed residuals')
-ax3.set_title('pandas autocorrelation plot of residuals')
-plt.show()
+autocorrelation_plot(residuals_bootstrap12,ax=ax3, label='modified residuals')
+ax3.set_title('Autocorrelation plot of residuals')
+ax3.set_xlabel('Lag')
+ax3.set_ylabel('Autocorrelation')
+#plt.show()
+f.tight_layout()
+
+
 f.savefig('Autocorrelation.pdf')
         
