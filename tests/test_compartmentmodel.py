@@ -14,6 +14,25 @@ def model():
 
 
 @pytest.fixture(scope='module')
+def TwoCXM():
+    from compartmentmodels.compartmentmodels import loaddata, savedata
+    from compartmentmodels.compartmentmodels import TwoCXModel
+    # need to set a stardict and convert input parameter maybe. 
+    #Set parameters for the model
+    startdict = {'FP': 51.0, 'VP': 11.2, 'PS':4.9,'VE':13.2}
+    time, aif1, aif2 =loaddata(filename='tests/cerebralartery.csv')  
+    aif = aif1 - aif1[0:5].mean()
+    model = TwoCXModel(time=time,curve=aif, aif=aif,startdict=startdict)
+    # calculate a model curve
+    model.curve = model.calc_modelfunction(model._parameters)
+    model.curve += 0.02 * aif.max() * np.random.randn(len(time))
+    # number of bootstraps
+    model.k=100  
+    
+    return model
+
+
+@pytest.fixture(scope='module')
 def preparedmodel():
     """ prepare a model instance with startdict, time, aif and curve, ready for fitting
     """
@@ -54,7 +73,7 @@ def braindata():
     return model
 
 @pytest.fixture(scope='module')
-def realdata():
+def lungdata():
     """ prepare a model instance with startdict, time, aif and synthetic curve +
     additional background noise, ready for fitting
     """
@@ -290,38 +309,59 @@ def test_genericModel_fit_model_determines_right_parameters(preparedmodel):
 
     assert np.allclose(preparedmodel._parameters, start_parameters)
 
-def test_genericModel_fit_model_determines_right_parameters(realdata):
+def test_genericModel_fit_model_determines_right_parameters(lungdata):
     """ Are the fitted parameters the same as the initial parameters?
     This might become a longer test case...
     """
 
-    start_parameters=realdata._parameters
-    return_value = realdata.fit_model()
-    print realdata.OptimizeResult
-    assert realdata._fitted
-    #assert np.allclose(realdata._parameters, start_parameters)
+    start_parameters=lungdata._parameters
+    return_value = lungdata.fit_model()
+    print lungdata.OptimizeResult
+    assert lungdata._fitted
+    #assert np.allclose(lungdata._parameters, start_parameters)
 
 
-def test_compartmentmodels_bootstrapping_output_dimension_and_type(realdata):
+def test_compartmentmodels_bootstrapping_output_dimension_and_type(lungdata):
     """ Is the dimension of the bootstrap_result equal to (2,k) 
     and the dimension of mean.- /std.bootstrap_result equal to (2,)?
     Is the output of type dict?
     Does the output dict contain 7 elements?
     Are 'low estimate', 'mean estimate' and 'high estimate' subdicts in the output dict?
     """
-    realdata.k=100   
-    fit_result= realdata.fit_model()
-    bootstrap = realdata.bootstrap()
-    assert (realdata._bootstrapped == True)
-    assert (realdata.bootstrap_result_raw.shape == (2,100))    
-    assert (type(realdata.readable_parameters) == dict)
-    assert (len(realdata.readable_parameters) == 7)   
+    lungdata.k=100   
+    fit_result= lungdata.fit_model()
+    bootstrap = lungdata.bootstrap()
+    assert (lungdata._bootstrapped == True)
+    assert (lungdata.bootstrap_result_raw.shape == (2,100))    
+    assert (type(lungdata.readable_parameters) == dict)
+    assert (len(lungdata.readable_parameters) == 7)   
     assert ('low estimate' and 'high estimate' and 'mean estimate' in 
-            realdata.readable_parameters)
-    assert (type(realdata.readable_parameters['low estimate']) == dict and 
-            type(realdata.readable_parameters['mean estimate']) == dict and
-            type(realdata.readable_parameters['high estimate']) == dict)
-    
+            lungdata.readable_parameters)
+    assert (type(lungdata.readable_parameters['low estimate']) == dict and 
+            type(lungdata.readable_parameters['mean estimate']) == dict and
+            type(lungdata.readable_parameters['high estimate']) == dict)
+
+
+def test_compartmentmodels_bootstrapping_output_content(lungdata):    
+    """Is 'low estimate' < 'mean estimate' < 'high estimate'?
+    Are fittet Parameters in between 'low estimate' and 'high estimate'?
+    """
+    lungdata.k=102 
+    fit_result= lungdata.fit_model()
+    bootstrap = lungdata.bootstrap()
+    assert (lungdata.bootstrap_result_raw.shape ==(2, lungdata.k))
+    assert (lungdata._bootstrapped == True)
+    dict_fit={'F':lungdata.readable_parameters['F'],
+                'v':lungdata.readable_parameters['v'],
+                'MTT':lungdata.readable_parameters['MTT']
+                }
+    assert (lungdata.readable_parameters['low estimate'] <
+            lungdata.readable_parameters['mean estimate'])
+    assert (lungdata.readable_parameters['mean estimate'] <
+            lungdata.readable_parameters['high estimate'])
+    assert (lungdata.readable_parameters['low estimate'] < dict_fit)
+    assert (dict_fit < lungdata.readable_parameters['high estimate'])
+ 
      
 def test_compartmentmodels_bootstrapping_output_content_braindata(braindata):    
     """Is 'low estimate' < 'mean estimate' < 'high estimate'?
@@ -342,66 +382,22 @@ def test_compartmentmodels_bootstrapping_output_content_braindata(braindata):
             braindata.readable_parameters['high estimate'])
     assert (braindata.readable_parameters['low estimate'] < dict_fit)
     assert (dict_fit < braindata.readable_parameters['high estimate'])
+    
 
-def test_compartmentmodels_bootstrapping_output_content(realdata):    
+def test_exchangemodel_output(TwoCXM):
     """Is 'low estimate' < 'mean estimate' < 'high estimate'?
     Are fittet Parameters in between 'low estimate' and 'high estimate'?
     """
-    realdata.k=1000  
-    fit_result= realdata.fit_model()
-    bootstrap = realdata.bootstrap()
-    assert (realdata.bootstrap_result_raw.shape ==(2, realdata.k))
-    assert (realdata._bootstrapped == True)
-    dict_fit={'F':realdata.readable_parameters['F'],
-                'v':realdata.readable_parameters['v'],
-                'MTT':realdata.readable_parameters['MTT']
+    fit_result= TwoCXM.fit_model()
+    bootstrap = TwoCXM.bootstrap()
+    assert (TwoCXM._bootstrapped == True)
+    dict_fit={'F':TwoCXM.readable_parameters['F'],
+                'v':TwoCXM.readable_parameters['v'],
+                'MTT':TwoCXM.readable_parameters['MTT']
                 }
-    assert (realdata.readable_parameters['low estimate'] <
-            realdata.readable_parameters['mean estimate'])
-    assert (realdata.readable_parameters['mean estimate'] <
-            realdata.readable_parameters['high estimate'])
-    assert (realdata.readable_parameters['low estimate'] < dict_fit)
-    assert (dict_fit < realdata.readable_parameters['high estimate'])
-            
-
-def test_compartmentmodels_bootstrapping_output_dimension_and_type2(realcurve):
-    """ Is the dimension of the bootstrap_result equal to (2,k) 
-    and the dimension of mean.- /std.bootstrap_result equal to (2,)?
-    Is the output of type dict?
-    Does the output dict contain 7 elements?
-    Are 'low estimate', 'mean estimate' and 'high estimate' subdicts in the output dict?
-    """
-    realcurve.k=102   
-    fit_result= realcurve.fit_model()
-    bootstrap = realcurve.bootstrap()
-    assert (realcurve._bootstrapped == True)
-    assert (realcurve.bootstrap_result_raw.shape == (2,102))    
-    assert (type(realcurve.readable_parameters) == dict)
-    assert (len(realcurve.readable_parameters) == 7)   
-    assert ('low estimate' and 'high estimate' and 'mean estimate' in 
-            realcurve.readable_parameters)
-    assert (type(realcurve.readable_parameters['low estimate']) == dict and 
-            type(realcurve.readable_parameters['mean estimate']) == dict and
-            type(realcurve.readable_parameters['high estimate']) == dict)    
-    
-    
-def test_compartmentmodels_bootstrapping_output_content2(realcurve):    
-    """Is 'low estimate' < 'mean estimate' < 'high estimate'?
-    Are fittet Parameters in between 'low estimate' and 'high estimate'?
-    """
-    realcurve.k=1000  
-    fit_result= realcurve.fit_model()
-    bootstrap = realcurve.bootstrap()
-    assert (realcurve._bootstrapped == True)    
-    assert (realcurve.bootstrap_result_raw.shape == (2,1000)) 
-    dict_fit={'F':realcurve.readable_parameters['F'],
-                'v':realcurve.readable_parameters['v'],
-                'MTT':realcurve.readable_parameters['MTT']
-                }
-    assert (realcurve.readable_parameters['low estimate'] <
-            realcurve.readable_parameters['mean estimate'])
-    assert (realcurve.readable_parameters['mean estimate'] <
-            realcurve.readable_parameters['high estimate'])
-    assert (realcurve.readable_parameters['low estimate'] < dict_fit)
-    assert (dict_fit < realcurve.readable_parameters['high estimate'])    
-    
+    assert (TwoCXM.readable_parameters['low estimate'] <
+            TwoCXM.readable_parameters['mean estimate'])
+    assert (TwoCXM.readable_parameters['mean estimate'] <
+            TwoCXM.readable_parameters['high estimate'])
+    assert (TwoCXM.readable_parameters['low estimate'] < dict_fit)
+    assert (dict_fit < TwoCXM.readable_parameters['high estimate'])
