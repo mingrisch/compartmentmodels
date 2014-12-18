@@ -546,8 +546,15 @@ class CompartmentModel:
         self.readable_parameters = original_readable_parameters
         self._bootstrapped=True
 
+        plt.plot(self.time,self.curve)
+        plt.plot(self.time, self.fit)
+        plt.show()
+        
         return self.get_parameters()
         
+
+
+
 
 
 
@@ -556,23 +563,52 @@ class CompartmentModel:
 class TwoCXModel(CompartmentModel):
     """
     The two compartment exchange model
+    
+    
+    this needs to be implemented for the whole script. Taken from S P Sourbron and D L Buckley - tracer kinetic modeliling in MRI
+    T_c = v_p / F_p    
+    T_e = v_e / PS    mean transit time of EES
+    T = (v_p + v_e) / F_p     mean transit time of combined system
+    sigma_+ = ((T+T_e) + sqrt(  (T+T_e)**2   -  4*T_c*T_e  ))   /   (2*T_c*T_e)
+    sigma_- = ((T+T_e) - sqrt(  (T+T_e)**2   -  4*T_c*T_e  ))   /   (2*T_c*T_e)    
+    R(t) = ((T*sigma_+   -  1)*sigma_-  * exp(-t*sigma_-)  +  (1-T*sigma_-)*sigma_+  * exp(-t*sgima_+)) / (sigma_+  - sigma_-)
+    R(s) = (T+ s*T_c*T_e)/(s**2 * T_c * T_e + s*(T+T_e)+1)
+    
     """
     def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1), startdict={'FP': 51.0, 'VP': 11.2, 'PS':4.9,'VE':13.2}):
        CompartmentModel.__init__(self,time, curve, aif, startdict)
        #override the value of the compartment model:
+       self.startdict=startdict
        self.nooffreeparameters=4
+       print "self._parameters {}".format(self._parameters)
        
     def __str__(self):
         return "2CX model"
 
-    def _calc_residuals(self, parameters,fjac=None):
-        """Calculates the difference of self.curve and a 2CX model
-        with residue function F((1-E)exp(-t*KP)+Eexp(-t*KM)) We follow
-        the notation in Sourbron, MRM09"""
-        status=0
-        self.residuals=self.curve -parameters[0]*((1-parameters[2])*self.convolution_w_exp(parameters[1]) +parameters[2]*self.convolution_w_exp(parameters[3]+parameters[1]))
 
-        return ([status,self.residuals])
+    
+    def calc_modelfunction(self, parameters):
+        """ Calculate the model curve for given parameters
+
+        Parameters
+        ----------
+        parameters: numpy.ndarray
+            model parameters
+
+        Returns:
+        --------
+        np.ndarray
+            an array with the model values
+
+        """
+        modelcurve = parameters[0]*(
+                                                            (parameters[2])*self.convolution_w_exp(parameters[1], fftconvolution=self.fft )
+                                                            +(1-parameters[2])*self.convolution_w_exp(parameters[3] +parameters[1], fftconvolution=self.fft)
+                                                            )
+
+        return modelcurve
+
+
 
     def convert_startdict(self,startdict):
       
@@ -615,7 +651,7 @@ class TwoCXModel(CompartmentModel):
         # we defy that KM > KP, with KM=parameter[1]+parameter[3] and KP=parameter[3], 
         # so that we have a fixed order of parameters. For that we need to subtract parameter[1] from KM to get the original KM
         KP = self._parameters[1]
-        KM = self._parameters[3]-self._parameters[1]
+        KM = self._parameters[3]+self._parameters[1]
         EM = self._parameters[2]
         FP = self._parameters[0]
 
@@ -635,6 +671,7 @@ class TwoCXModel(CompartmentModel):
         self.readable_parameters["VE"]=VE*100.0
         self.readable_parameters["TE"]=TE
 
+        print 'self.readable_parameters', self.readable_parameters
 
         if self._fitted:
             self.readable_parameters["Iterations"] = self.OptimizeResult.nit
@@ -642,7 +679,7 @@ class TwoCXModel(CompartmentModel):
         
         if self._bootstrapped:
             # convert bootstrapped_raw to boostrapped_physiological
-            self.bootstrap_result_physiological=np.zeros((len(self.readable_parameters),self.k))
+            self.bootstrap_result_physiological=np.zeros((7,self.k))
             assert self.bootstrap_result_raw.shape[1] == self.k
             for i in range(self.k):
                 KP_bootstrap = self.bootstrap_result_raw[1,i] 

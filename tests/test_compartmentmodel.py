@@ -14,25 +14,6 @@ def model():
 
 
 @pytest.fixture(scope='module')
-def TwoCXM():
-    from compartmentmodels.compartmentmodels import loaddata, savedata
-    from compartmentmodels.compartmentmodels import TwoCXModel
-    # need to set a stardict and convert input parameter maybe. 
-    #Set parameters for the model
-    startdict = {'FP': 51.0, 'VP': 11.2, 'PS':4.9,'VE':13.2}
-    time, aif1, aif2 =loaddata(filename='tests/cerebralartery.csv')  
-    aif = aif1 - aif1[0:5].mean()
-    model = TwoCXModel(time=time,curve=aif, aif=aif,startdict=startdict)
-    # calculate a model curve
-    model.curve = model.calc_modelfunction(model._parameters)
-    model.curve += 0.02 * aif.max() * np.random.randn(len(time))
-    # number of bootstraps
-    model.k=100  
-    
-    return model
-
-
-@pytest.fixture(scope='module')
 def preparedmodel():
     """ prepare a model instance with startdict, time, aif and curve, ready for fitting
     """
@@ -383,21 +364,6 @@ def test_compartmentmodels_bootstrapping_output_content_braindata(braindata):
     assert (braindata.readable_parameters['low estimate'] < dict_fit)
     assert (dict_fit < braindata.readable_parameters['high estimate'])
     
-
-def test_exchangemodel_output(TwoCXM):
-    """Is 'low estimate' < 'mean estimate' < 'high estimate'?
-    Are fittet Parameters in between 'low estimate' and 'high estimate'?
-    """
-    fit_result= TwoCXM.fit_model()
-    bootstrap = TwoCXM.bootstrap()
-    assert (TwoCXM._bootstrapped == True)
-    dict_fit={'F':TwoCXM.readable_parameters['F'],
-                'v':TwoCXM.readable_parameters['v'],
-                'MTT':TwoCXM.readable_parameters['MTT']
-                }
-    assert (TwoCXM.readable_parameters['low estimate'] <
-            TwoCXM.readable_parameters['mean estimate'])
-    assert (TwoCXM.readable_parameters['mean estimate'] <
-            TwoCXM.readable_parameters['high estimate'])
-    assert (TwoCXM.readable_parameters['low estimate'] < dict_fit)
-    assert (dict_fit < TwoCXM.readable_parameters['high estimate'])
+    
+    
+    
