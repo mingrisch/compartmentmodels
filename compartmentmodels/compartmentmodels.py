@@ -10,7 +10,8 @@ from pandas.tools.plotting import autocorrelation_plot
 import seaborn as sns
 # helper functions for saving and loading 'model datasets'
 
-def loaddata(filename, separator=',',comment='#'):
+
+def loaddata(filename, separator=',', comment='#'):
     """ This function loads time, curve and AIF arrays from 
     a textfile with the structure:
     \# commentline (lines are ignored if they start with 'comment', 
@@ -18,7 +19,7 @@ def loaddata(filename, separator=',',comment='#'):
     time[0], curve[0], aif[0]
     time[1], curve[1], aif[1]
     ...
-    
+
     loaddata performs sanity checks and raises a Value Error if:
     if time, curve and aif have not the same length
     if time is not monotonously raising
@@ -27,29 +28,30 @@ def loaddata(filename, separator=',',comment='#'):
     otherwise, the function returns a tuple (time, curve, aif)
     """
     try:
-        t,c,a = np.loadtxt(filename, comments=comment, 
-                        delimiter=separator,unpack=True)
+        t, c, a = np.loadtxt(filename, comments=comment,
+                             delimiter=separator, unpack=True)
     except:
         raise IOError
 
-    #sanity checks:
+    # sanity checks:
     if (
-        (len(t) != len(a)) or 
-        (len(t)!=len(c)) or 
-        (len(a) != len(c))):
+            (len(t) != len(a)) or
+            (len(t) != len(c)) or
+            (len(a) != len(c))):
         raise ValueError
 
-    return (t,c,a)
+    return (t, c, a)
 
 
-def savedata(filename,time, curve, aif):
+def savedata(filename, time, curve, aif):
     """This function saves three 1D arrays time, curve and AIF
     into a file that complies to the format accepted by loaddata"""
     try:
-        np.savetxt(filename, np.transpose((time,curve,aif)), delimiter=',')
+        np.savetxt(filename, np.transpose((time, curve, aif)), delimiter=',')
         return True
     except:
         return False
+
 
 class CompartmentModel:
 
@@ -131,12 +133,11 @@ class CompartmentModel:
 
         # convert the dictionary entry to 'raw' parameters:
         self._parameters = self.convert_startdict(startdict)
-        
-        #defy method and bounds, which fit_model will use:
-        self.constrained=False
+
+        # defy method and bounds, which fit_model will use:
+        self.constrained = False
         self.set_constraints(self.constrained)
-   
-        
+
     def __str__(self):
         return "Base class for compartment models."
 
@@ -168,7 +169,6 @@ class CompartmentModel:
         v = self._parameters[0] / self._parameters[1] * 100
         mtt = 1 / self._parameters[1]
 
-        
         self.readable_parameters["F"] = F
         self.readable_parameters["v"] = v
         self.readable_parameters["MTT"] = mtt
@@ -176,29 +176,29 @@ class CompartmentModel:
         if self._fitted:
             self.readable_parameters["Iterations"] = self.OptimizeResult.nit
 
-        
         if self._bootstrapped:
             # convert bootstrapped_raw to boostrapped_physiological
-            self.bootstrap_result_physiological=np.zeros((3,self.k))
+            self.bootstrap_result_physiological = np.zeros((3, self.k))
             assert self.bootstrap_result_raw.shape[1] == self.k
             for i in range(self.k):
-                F_physiological = self.bootstrap_result_raw[0,i] * 6000
-                v_physiological = self.bootstrap_result_raw[0,i] / self.bootstrap_result_raw[1,i] * 100
-                mtt_physiological = 1 / self.bootstrap_result_raw[1,i]
-                self.bootstrap_result_physiological[:,i] = (F_physiological, v_physiological, mtt_physiological)
-            
+                F_physiological = self.bootstrap_result_raw[0, i] * 6000
+                v_physiological = self.bootstrap_result_raw[
+                    0, i] / self.bootstrap_result_raw[1, i] * 100
+                mtt_physiological = 1 / self.bootstrap_result_raw[1, i]
+                self.bootstrap_result_physiological[:, i] = (
+                    F_physiological, v_physiological, mtt_physiological)
 
-            self.bootstrap_percentile = np.percentile(self.bootstrap_result_physiological, [17, 50, 83], axis=1)
+            self.bootstrap_percentile = np.percentile(
+                self.bootstrap_result_physiological, [17, 50, 83], axis=1)
 
-            
-            self.readable_parameters["low estimate"] = {'F':self.bootstrap_percentile[0,0], 'v':self.bootstrap_percentile[0,1], 'MTT':self.bootstrap_percentile[0,2]}
-            self.readable_parameters["mean estimate"] = {'F':self.bootstrap_percentile[1,0], 'v':self.bootstrap_percentile[1,1], 'MTT':self.bootstrap_percentile[1,2]}
-            self.readable_parameters["high estimate"] = {'F':self.bootstrap_percentile[2,0], 'v':self.bootstrap_percentile[2,1], 'MTT':self.bootstrap_percentile[2,2]}
-                        
-     
+            self.readable_parameters["low estimate"] = {'F': self.bootstrap_percentile[
+                0, 0], 'v': self.bootstrap_percentile[0, 1], 'MTT': self.bootstrap_percentile[0, 2]}
+            self.readable_parameters["mean estimate"] = {'F': self.bootstrap_percentile[
+                1, 0], 'v': self.bootstrap_percentile[1, 1], 'MTT': self.bootstrap_percentile[1, 2]}
+            self.readable_parameters["high estimate"] = {'F': self.bootstrap_percentile[
+                2, 0], 'v': self.bootstrap_percentile[2, 1], 'MTT': self.bootstrap_percentile[2, 2]}
+
         return self.readable_parameters
-
-
 
     def get_raw_parameters(self):
         # I don't think we ever need this function.
@@ -256,7 +256,7 @@ class CompartmentModel:
         default, we calculate the convolution analytically with a linearly
         interpolated AIF, following the notation introduced in
         http://edoc.ub.uni-muenchen.de/14951/. 
-        
+
         Alternatively, convolution via fft can be used. Currently, the tests
         for the FFT convolution that compare FFT to standard convolution fail.
         Presumably, the reason is the difference between sinc-interpolation (by
@@ -376,13 +376,10 @@ class CompartmentModel:
         double
             sum of squared residuals
         """
-        
+
         residuals = curve - self.calc_modelfunction(parameters)
         self.residuals = residuals
         return np.sum(residuals ** 2)
-
-
-
 
     def convert_startdict(self, startdict):
         """
@@ -407,16 +404,16 @@ class CompartmentModel:
         FP = startdict.get("F") / 6000.  # we need to convert to SI
         VP = startdict.get("v") / 100
         lamda = 1. / (VP / FP)
-        
+
         # store the parameters in self._parameters:
-        self._parameters=np.asarray([FP, lamda])
+        self._parameters = np.asarray([FP, lamda])
         return np.asarray([FP, lamda])
 
     def set_constraints(self, constrained):
         """ This function sets the contraints for fitting. 
         """
-    
-        self.constrained=constrained
+
+        self.constrained = constrained
 
         if constrained:
             self.bounds = [(0, None), (0, None)]
@@ -424,8 +421,7 @@ class CompartmentModel:
         else:
             self.bounds = [(None, None), (None, None)]
             self.method = 'BFGS'
-            
-            
+
     def fit_model(self, startdict=None,
                   constrained=True, fft=False):
         """ Perform the model fitting. 
@@ -456,11 +452,10 @@ class CompartmentModel:
         if startdict is None:
             startparameters = self._parameters
         else:
-            startparameters= self.convert_startdict(startdict)
-        
+            startparameters = self.convert_startdict(startdict)
 
         self.set_constraints(constrained)
-        
+
         fit_results = minimize(self._calc_residuals, startparameters, args=(self.curve,),
                                method=self.method,
                                bounds=self.bounds)
@@ -472,9 +467,8 @@ class CompartmentModel:
         self.fit = self.calc_modelfunction(self._parameters)
         self._fitted = fit_results.success
 
-        #print "Fit returned {} and yielded the parameters {}".format(fit_results.success, fit_results.x)
-        
-        
+        # print "Fit returned {} and yielded the parameters
+        # {}".format(fit_results.success, fit_results.x)
 
         return fit_results.success
 
@@ -494,7 +488,7 @@ class CompartmentModel:
             return aic
         else:
             return False
-    
+
     def bootstrap(self, k=None):
         """ Bootstrap the parameter estimates after a successful fit.
 
@@ -513,58 +507,54 @@ class CompartmentModel:
             return None
         if k:
             self.k = k
-            
+
         # need to change variables for bootstrapping
         original_curve = self.curve
         original_fit = self.fit
         original_parameters = self._parameters
-        original_readable_parameters= self.readable_parameters
-        
+        original_readable_parameters = self.readable_parameters
+
         # set of residuals calculated for bootstrapping
         residuals_bootstrap = (self.curve - self.fit)
-        
+
         # shapiro-wilk test for normaly distributed residuals
-        w,p = sp.stats.shapiro(residuals_bootstrap)
-        print 'test statistic:',w,'p-value:', p
+        w, p = sp.stats.shapiro(residuals_bootstrap)
+        print 'test statistic:', w, 'p-value:', p
         if p < 0.05:
-            raise ValueError('probably not normal distributed residuals. Try another model')
-        
+            raise ValueError(
+                'probably not normal distributed residuals. Try another model')
+
         # array, which will be overwritten with the results
-        self.bootstrap_result_raw = np.zeros((len(self._parameters),self.k))
-        
+        self.bootstrap_result_raw = np.zeros((len(self._parameters), self.k))
+
         # bootstrapping loop
         for i in range(self.k):
-            sample_index = np.random.randint(0,residuals_bootstrap.shape[0], residuals_bootstrap.shape)
+            sample_index = np.random.randint(
+                0, residuals_bootstrap.shape[0], residuals_bootstrap.shape)
             self.curve = original_fit + residuals_bootstrap[sample_index]
             self.fit_model(original_readable_parameters)
-            self.bootstrap_result_raw[:,i] = self._parameters
-        
+            self.bootstrap_result_raw[:, i] = self._parameters
+
         # rechange variables
-        self.curve= original_curve
+        self.curve = original_curve
         self.fit = original_fit
         self._parameters = original_parameters
         self.readable_parameters = original_readable_parameters
-        self._bootstrapped=True
+        self._bootstrapped = True
 
-        plt.plot(self.time,self.curve)
+        plt.plot(self.time, self.curve)
         plt.plot(self.time, self.fit)
         plt.show()
-        
+
         return self.get_parameters()
-        
-
-
-
-
-
-
 
 
 class TwoCXModel(CompartmentModel):
+
     """
     The two compartment exchange model
-    
-    
+
+
     this needs to be implemented for the whole script. Taken from S P Sourbron and D L Buckley - tracer kinetic modeliling in MRI
     T_c = v_p / F_p    
     T_e = v_e / PS    mean transit time of EES
@@ -573,20 +563,19 @@ class TwoCXModel(CompartmentModel):
     sigma_- = ((T+T_e) - sqrt(  (T+T_e)**2   -  4*T_c*T_e  ))   /   (2*T_c*T_e)    
     R(t) = ((T*sigma_+   -  1)*sigma_-  * exp(-t*sigma_-)  +  (1-T*sigma_-)*sigma_+  * exp(-t*sgima_+)) / (sigma_+  - sigma_-)
     R(s) = (T+ s*T_c*T_e)/(s**2 * T_c * T_e + s*(T+T_e)+1)
-    
+
     """
-    def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1), startdict={'FP': 51.0, 'VP': 11.2, 'PS':4.9,'VE':13.2}):
-       CompartmentModel.__init__(self,time, curve, aif, startdict)
-       #override the value of the compartment model:
-       self.startdict=startdict
-       self.nooffreeparameters=4
-       print "self._parameters {}".format(self._parameters)
-       
+
+    def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1), startdict={'FP': 51.0, 'VP': 11.2, 'PS': 4.9, 'VE': 13.2}):
+        CompartmentModel.__init__(self, time, curve, aif, startdict)
+        # override the value of the compartment model:
+        self.startdict = startdict
+        self.nooffreeparameters = 4
+        print "self._parameters {}".format(self._parameters)
+
     def __str__(self):
         return "2CX model"
 
-
-    
     def calc_modelfunction(self, parameters):
         """ Calculate the model curve for given parameters
 
@@ -601,122 +590,152 @@ class TwoCXModel(CompartmentModel):
             an array with the model values
 
         """
-        modelcurve = parameters[0]*(
-                                                            (parameters[2])*self.convolution_w_exp(parameters[1], fftconvolution=self.fft )
-                                                            +(1-parameters[2])*self.convolution_w_exp(parameters[3] +parameters[1], fftconvolution=self.fft)
-                                                            )
+
+        # we need to make sure how these parameters are defined. kp and
+        # km allow a discrimination between the two exponential terms,
+        # since kp is always larger than km
+
+        # with the internal fit parameters
+        # [ Fp, delta, E, Km], with delta = kp-km, we can write the model curve as
+
+        # R(t)  = Fp * (E * exp(-tKm) + (1-E) exp(-t(Km+delta)
+        p = parameters
+        modelcurve = p[0] * (
+            (p[2] * self.convolution_w_exp(p[3], fftconvolution=self.fft)) +
+            (1 - p[2]) *
+            self.convolution_w_exp(p[3] + p[1], fftconvolution=self.fft)
+        )
+
+        # modelcurve = parameters[0] * (
+        #    (parameters[2]) * self.convolution_w_exp(parameters[1],
+        #                                             fftconvolution=self.fft)
+        #    + (1 - parameters[2]) * self.convolution_w_exp(parameters[3] +
+        #                                                   parameters[1], fftconvolution=self.fft)
+        #)
 
         return modelcurve
 
+    def convert_startdict(self, startdict):
+        """
+        This notation was used in my PhD thesis, it is slightly clearer than the PMB notation.
 
+        """
 
-    def convert_startdict(self,startdict):
-      
-        FP=startdict.get("FP")/6000.
-        VP=startdict.get("VP")/100.
-        PS=startdict.get("PS")/6000.
-        VE=startdict.get("VE")/100.
+        FP = startdict.get("FP") / 6000.
+        VP = startdict.get("VP") / 100.
+        PS = startdict.get("PS") / 6000.
+        VE = startdict.get("VE") / 100.
 
-        TB=VP/FP
-        TE=VE/PS
-        TP=VP/(PS+FP)
+        TB = VP / FP
+        TE = VE / PS
+        TP = VP / (PS + FP)
 
-        KP=0.5*(1./TP+1./TE+sp.sqrt(sp.square(1./TP+1./TE)-4./TE/TB))
-        KM=0.5*(1./TP+1./TE-sp.sqrt(sp.square(1./TP+1./TE)-4./TE/TB))
-        E=(KP-1/TB)/(KP-KM)
+        KP = 0.5 * \
+            (1. / TP + 1. / TE +
+             sp.sqrt(sp.square(1. / TP + 1. / TE) - 4. / TE / TB))
+        KM = 0.5 * \
+            (1. / TP + 1. / TE -
+             sp.sqrt(sp.square(1. / TP + 1. / TE) - 4. / TE / TB))
+        E = (KP - 1 / TB) / (KP - KM)
 
-        #parameters=[FP,KP,E,KM]
-        return [FP,KP,E,KM]
-        
+        delta = KP - KM
+        # parameters=[FP,delta,E,KM]
+        return [FP, delta, E, KM]
+
     def set_constraints(self, constrained):
         """ This function sets the contraints for fitting. 
         """
-    
-        self.constrained=constrained
-        
-        # somethings wrong with the bounds. get error when testing, like: TypeError: unsupported operand type(s) for -: 'list' and 'list'
+
+        self.constrained = constrained
+
+        # somethings wrong with the bounds. get error when testing, like:
+        # TypeError: unsupported operand type(s) for -: 'list' and 'list'
         if constrained:
             self.bounds = [(0, None), (0, None), (0, None), (0, None)]
             self.method = 'L-BFGS-B'
         else:
-            self.bounds = [(None, None), (None, None), (None, None), (None, None)]
+            self.bounds = [
+                (None, None), (None, None), (None, None), (None, None)]
             self.method = 'BFGS'
-            
 
     def get_parameters(self):
         """To be used after a successful fit.
         returns a dictionary with keys FP, VP, TP, PS, VE, TE
         conversion into physiological parameters follows sourbron, mrm09
         """
-        # we defy that KM > KP, with KM=parameter[1]+parameter[3] and KP=parameter[3], 
-        # so that we have a fixed order of parameters. For that we need to subtract parameter[1] from KM to get the original KM
-        KP = self._parameters[1]
-        KM = self._parameters[3]+self._parameters[1]
+        # self._parameters=[Fp, delta, E, KM]
+
+        delta = self._parameters[1]
+        KM = self._parameters[3]
+        KP = KM + delta
         EM = self._parameters[2]
         FP = self._parameters[0]
 
-        TB = 1.0/(KP - EM*(KP-KM))
-        TE = 1.0/(TB*KP*KM)
-        TP = 1.0/(KP+KM-1.0/TE)
+        TB = 1.0 / (KP - EM * (KP - KM))
+        TE = 1.0 / (TB * KP * KM)
+        TP = 1.0 / (KP + KM - 1.0 / TE)
 
-        PS = FP * (TB/TP-1)
-        VE = PS*TE
-        E = PS/(PS+FP)*100.0
+        PS = FP * (TB / TP - 1)
+        VE = PS * TE
+        E = PS / (PS + FP) * 100.0
 
-        self.readable_parameters["FP"]=FP*6000.0
-        self.readable_parameters["VP"]=FP*TB*100.0
-        self.readable_parameters["TP"]=TP
-        self.readable_parameters["E"]=E
-        self.readable_parameters["PS"]=PS*6000.0
-        self.readable_parameters["VE"]=VE*100.0
-        self.readable_parameters["TE"]=TE
+        self.readable_parameters["FP"] = FP * 6000.0
+        self.readable_parameters["VP"] = FP * TB * 100.0
+        self.readable_parameters["TP"] = TP
+        self.readable_parameters["E"] = E
+        self.readable_parameters["PS"] = PS * 6000.0
+        self.readable_parameters["VE"] = VE * 100.0
+        self.readable_parameters["TE"] = TE
 
         print 'self.readable_parameters', self.readable_parameters
 
         if self._fitted:
             self.readable_parameters["Iterations"] = self.OptimizeResult.nit
 
-        
         if self._bootstrapped:
             # convert bootstrapped_raw to boostrapped_physiological
-            self.bootstrap_result_physiological=np.zeros((7,self.k))
+            self.bootstrap_result_physiological = np.zeros((7, self.k))
             assert self.bootstrap_result_raw.shape[1] == self.k
             for i in range(self.k):
-                KP_bootstrap = self.bootstrap_result_raw[1,i] 
-                KM_bootstrap = self.bootstrap_result_raw[3,i]-self.bootstrap_result_raw[1,i]
-                EM_bootstrap = self.bootstrap_result_raw[2,i]
-                FP_bootstrap = self.bootstrap_result_raw[0,i]
-                
-                TB_bootstrap = 1.0/(KP_bootstrap - EM_bootstrap*(KP_bootstrap-KM_bootstrap))
-                TE_bootstrap = 1.0/(TB_bootstrap*KP_bootstrap*KM_bootstrap)
-                TP_bootstrap = 1.0/(KP_bootstrap+KM_bootstrap-1.0/TE_bootstrap)
+                KP_bootstrap = self.bootstrap_result_raw[1, i]
+                KM_bootstrap = self.bootstrap_result_raw[
+                    3, i] - self.bootstrap_result_raw[1, i]
+                EM_bootstrap = self.bootstrap_result_raw[2, i]
+                FP_bootstrap = self.bootstrap_result_raw[0, i]
 
-                PS_bootstrap = FP_bootstrap * (TB_bootstrap/TP_bootstrap-1)
-                VE_bootstrap = PS_bootstrap*TE_bootstrap
-                E_bootstrap = PS_bootstrap/(PS_bootstrap+FP_bootstrap)*100.0
-                
-                FP_bootstrap=FP_bootstrap*6000.0
-                VP_bootstrap=FP_bootstrap*TB_bootstrap*100.0
-                PS_bootstrap=PS_bootstrap*6000.0
-                VE_bootstrap=VE_bootstrap*100.0
-                self.bootstrap_result_physiological[:,i] = (FP_bootstrap,VP_bootstrap,TP_bootstrap,E_bootstrap,PS_bootstrap,VE_bootstrap,TE_bootstrap)
-            
+                TB_bootstrap = 1.0 / \
+                    (KP_bootstrap - EM_bootstrap *
+                     (KP_bootstrap - KM_bootstrap))
+                TE_bootstrap = 1.0 / \
+                    (TB_bootstrap * KP_bootstrap * KM_bootstrap)
+                TP_bootstrap = 1.0 / \
+                    (KP_bootstrap + KM_bootstrap - 1.0 / TE_bootstrap)
 
-            self.bootstrap_percentile = np.percentile(self.bootstrap_result_physiological, [17, 50, 83], axis=1)
+                PS_bootstrap = FP_bootstrap * (TB_bootstrap / TP_bootstrap - 1)
+                VE_bootstrap = PS_bootstrap * TE_bootstrap
+                E_bootstrap = PS_bootstrap / \
+                    (PS_bootstrap + FP_bootstrap) * 100.0
 
-            result_name_list=['low estimate', 'mean estimate', 'high estimate']
+                FP_bootstrap = FP_bootstrap * 6000.0
+                VP_bootstrap = FP_bootstrap * TB_bootstrap * 100.0
+                PS_bootstrap = PS_bootstrap * 6000.0
+                VE_bootstrap = VE_bootstrap * 100.0
+                self.bootstrap_result_physiological[:, i] = (
+                    FP_bootstrap, VP_bootstrap, TP_bootstrap, E_bootstrap, PS_bootstrap, VE_bootstrap, TE_bootstrap)
+
+            self.bootstrap_percentile = np.percentile(
+                self.bootstrap_result_physiological, [17, 50, 83], axis=1)
+
+            result_name_list = [
+                'low estimate', 'mean estimate', 'high estimate']
             for j in range(len(result_name_list)):
-                self.readable_parameters["%s" %result_name_list[ j ] ] ={'FP':self.bootstrap_percentile[j,0], 'VP':self.bootstrap_percentile[j,1], 
-                                                                                                            'TP':self.bootstrap_percentile[j,2], 'E':self.bootstrap_percentile[j,3], 
-                                                                                                            'PS':self.bootstrap_percentile[j,4], 'VE':self.bootstrap_percentile[j,5], 
-                                                                                                            'TE':self.bootstrap_percentile[j,6]     
-                                                                                                            }
-        
+                self.readable_parameters["%s" % result_name_list[j]] = {'FP': self.bootstrap_percentile[j, 0], 'VP': self.bootstrap_percentile[j, 1],
+                                                                        'TP': self.bootstrap_percentile[j, 2], 'E': self.bootstrap_percentile[j, 3],
+                                                                        'PS': self.bootstrap_percentile[j, 4], 'VE': self.bootstrap_percentile[j, 5],
+                                                                        'TE': self.bootstrap_percentile[j, 6]
+                                                                        }
+
         return self.readable_parameters
-
-
-
-
 
 
 class CompartmentUptakeModel(CompartmentModel):
@@ -800,7 +819,6 @@ class CompartmentUptakeModel(CompartmentModel):
         pass
 
 
-
 if __name__ == '__main__':
     import pylab
     npt = 200
@@ -846,18 +864,16 @@ if __name__ == '__main__':
     # fit the model to the curve, using fftconvolution
     gp.fit_model(initial_values, fft=True)
 
-    
     results_fft_conv = gp.get_parameters()
     gp.bootstrap(10)
-    
 
     results_bootstrap = gp.get_parameters()
     for p in ['F', 'v', 'MTT', 'Iterations']:
         print 'True value of {}: {}'.format(p, true_values.get(p))
         print 'Fit results std. conv {}: {}'.format(p, results_std_conv.get(p))
         print 'Fit results fft. conv {}: {}'.format(p, results_fft_conv.get(p))
-        
-    print "Bootstrap estimates: "        
+
+    print "Bootstrap estimates: "
     print 'low estimate: ', results_bootstrap['low estimate']
     print 'mean estimate:', results_bootstrap['mean estimate']
     print 'high estimate:', results_bootstrap['high estimate']
