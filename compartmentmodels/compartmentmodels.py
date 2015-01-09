@@ -542,9 +542,9 @@ class CompartmentModel:
         self.readable_parameters = original_readable_parameters
         self._bootstrapped = True
 
-        plt.plot(self.time, self.curve)
-        plt.plot(self.time, self.fit)
-        plt.show()
+        #plt.plot(self.time, self.curve)
+        #plt.plot(self.time, self.fit)
+        #plt.show()
 
         return self.get_parameters()
 
