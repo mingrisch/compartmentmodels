@@ -605,14 +605,7 @@ class TwoCXModel(CompartmentModel):
             (1 - p[2]) *
             self.convolution_w_exp(p[3] + p[1], fftconvolution=self.fft)
         )
-
-        # modelcurve = parameters[0] * (
-        #    (parameters[2]) * self.convolution_w_exp(parameters[1],
-        #                                             fftconvolution=self.fft)
-        #    + (1 - parameters[2]) * self.convolution_w_exp(parameters[3] +
-        #                                                   parameters[1], fftconvolution=self.fft)
-        #)
-
+        
         return modelcurve
 
     def convert_startdict(self, startdict):
@@ -738,7 +731,7 @@ class TwoCXModel(CompartmentModel):
         return self.readable_parameters
 
 
-class CompartmentUptakeModel(CompartmentModel):
+class TwoCUModel(CompartmentModel):
 
     """ A compartment uptake model, as in the Sourbron/Buckley paper.
 
@@ -783,40 +776,106 @@ class CompartmentUptakeModel(CompartmentModel):
         a successfull fit
 
 
-
-
     """
 
     def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1),
-                 startdict={'Fp': 50.0, 'v': 12.2, 'PS': 2.1}):
-        # call __super__.__init__, with the appropriate parameters.
-
-        # A lot of this can simply be copied from previous implementations.
-
-        # Nevertheless, we do this strictly test-driven.
-
-        # other initializations:
-
-        # functions to override:
-        pass
+                        startdict={'Fp': 50.0, 'v': 12.2, 'PS': 2.1}):
+        CompartmentModel.__init__(self, time, curve, aif, startdict)
+        # override the value of the compartment model:
+        self.startdict = startdict
+        self.nooffreeparameters=3
+    
+    def __str__(self):
+        return "2CU model"
 
     def calc_modelfunction(self, parameters):
-        pass
+        """This function calculates the residuals for a two
+        compartment uptake model with the residual function
+        p[0]*((1-p[2])*exp[-t*p[1])+ p[2]), or, correspondingly,
+        FP*(exp(-t/TP)+ E(1-exp(-t/TP)))=
+        FP*((1-E)*exp(-t/TP)+E)"""
+        
+        p=parameters
+        modelcurve=p[0]*((1-p[2])*self.convolution_w_exp(p[1])+ 
+                                  p[2]*self.intvector())
 
-    def _calc_residuals(self, parameters):
-        # in fact, this does not need to be redefined
-        pass
+        return modelcurve
 
-    def convert_startdict(self, startdict):
-        # this needs to be redefined
-        pass
+    def convert_startdict(self,startdict):
+        FP=startdict.get("FP")/6000.
+        VP=startdict.get("VP")/100.
+        PS=startdict.get("PS")/6000.
+        #VE=startdict.get("VE")/100.
+        
+        E = PS/(PS+FP)
+        TP=VP/(PS+FP)
+        
+        return [FP,1./TP,E]
 
+    def set_constraints(self, constrained):
+        """ This function sets the contraints for fitting. 
+        """
+
+        self.constrained = constrained
+
+        if constrained:
+            self.bounds = [(0, None), (0, None), (0, None)]
+            self.method = 'L-BFGS-B'
+        else:
+            self.bounds = [
+                (None, None), (None, None), (None, None)]
+            self.method = 'BFGS'
+            
     def get_parameters(self):
-        # this needs to be reimplemented.
+        """To be used after a successful fit.
+        returns a dictionary with keys FP, VP, TP, PS, VE, TE
+        conversion into physiological parameters follows sourbron, mrm09
+        """
+        FP = self._parameters[0]
+        TP = 1./self._parameters[1]
+        E  = self._parameters[2]
+        VP = TP*FP/(1.0 -E)
+        PS = E*FP/(1.0-E)
 
-        # Also convert_startdict and get_parameters are, in fact, getters and
-        # setters. Maybe the should be renamed in a more consistent fashion.
-        pass
+        self.readable_parameters["FP"]=FP*6000
+        self.readable_parameters["VP"]=VP*100
+        self.readable_parameters["TP"]=TP
+        self.readable_parameters["PS"]=PS*6000
+        self.readable_parameters["E"]=E*100
+        #self.readable_parameters["VE"]=None
+        #self.readable_parameters["TE"]=None
+
+        if self._fitted:
+            self.readable_parameters["Iterations"] = self.OptimizeResult.nit
+
+        if self._bootstrapped:
+            # convert bootstrapped_raw to boostrapped_physiological
+            self.bootstrap_result_physiological = np.zeros((5, self.k))
+            assert self.bootstrap_result_raw.shape[1] == self.k
+            for i in range(self.k):
+                FP_bootstrap = self.bootstrap_result_raw[0, i]  * 6000.0
+                TP_bootstrap = 1/self.bootstrap_result_raw[1,i]
+                E_bootstrap = self.bootstrap_result_raw[2, i] * 100.0
+                VP_bootstrap = TP_bootstrao*FP_bootstrap/(1.0-E_bootstrap) * 100.0
+                PS_bootstrap = E_bootstrap*FP_bootstrap/(1.0-E_bootstrap) * 6000.0
+                
+                self.bootstrap_result_physiological[:, i] = (
+                    FP_bootstrap, VP_bootstrap, TP_bootstrap, E_bootstrap, PS_bootstrap)
+
+            self.bootstrap_percentile = np.percentile(
+                self.bootstrap_result_physiological, [17, 50, 83], axis=1)
+
+            result_name_list = [
+                'low estimate', 'mean estimate', 'high estimate']
+            for j in range(len(result_name_list)):
+                self.readable_parameters["%s" % result_name_list[j]] = {'FP': self.bootstrap_percentile[j, 0], 'VP': self.bootstrap_percentile[j, 1],
+                                                                        'TP': self.bootstrap_percentile[j, 2], 'E': self.bootstrap_percentile[j, 3],
+                                                                        'PS': self.bootstrap_percentile[j, 4]
+                                                                        }
+
+
+        return self.readable_parameters
+
 
 
 if __name__ == '__main__':
