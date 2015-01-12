@@ -571,7 +571,7 @@ class TwoCXModel(CompartmentModel):
         # override the value of the compartment model:
         self.startdict = startdict
         self.nooffreeparameters = 4
-        print "self._parameters {}".format(self._parameters)
+        print "self._parameters 2CX{}".format(self._parameters)
 
     def __str__(self):
         return "2CX model"
@@ -679,11 +679,24 @@ class TwoCXModel(CompartmentModel):
         self.readable_parameters["PS"] = PS * 6000.0
         self.readable_parameters["VE"] = VE * 100.0
         self.readable_parameters["TE"] = TE
-
-        print 'self.readable_parameters', self.readable_parameters
+        # pseuo code
+        if  self._parameters.any() < 0:
+            print "Something went wrong with the constraints!"
+            
+        if any( v < 0 for v in self.readable_parameters.itervalues()):
+            print "something went wrong with the reaable parameters"
+            print self._parameters
+            print self.readable_parameters	
+        
+        #print 'self.readable_parameters', self.readable_parameters
 
         if self._fitted:
             self.readable_parameters["Iterations"] = self.OptimizeResult.nit
+            
+            if any( v < 0 for v in self.readable_parameters.itervalues()):
+                print "something went wrong with the readable parameters"
+                print self._parameters
+                print self.readable_parameters	    
 
         if self._bootstrapped:
             # convert bootstrapped_raw to boostrapped_physiological
@@ -715,7 +728,9 @@ class TwoCXModel(CompartmentModel):
                 VE_bootstrap = VE_bootstrap * 100.0
                 self.bootstrap_result_physiological[:, i] = (
                     FP_bootstrap, VP_bootstrap, TP_bootstrap, E_bootstrap, PS_bootstrap, VE_bootstrap, TE_bootstrap)
-
+                #hier überprüfen nach zahlen die kleiner null sind
+                #und alles darüber der richtigen notation anpassen!
+                
             self.bootstrap_percentile = np.percentile(
                 self.bootstrap_result_physiological, [17, 50, 83], axis=1)
 
@@ -727,7 +742,10 @@ class TwoCXModel(CompartmentModel):
                                                                         'PS': self.bootstrap_percentile[j, 4], 'VE': self.bootstrap_percentile[j, 5],
                                                                         'TE': self.bootstrap_percentile[j, 6]
                                                                         }
-
+            if any( v < 0 for v in self.readable_parameters.itervalues()):
+                print "something went wrong with the reaable parameters"
+                print self._parameters
+                print self.readable_parameters
         return self.readable_parameters
 
 
@@ -779,11 +797,12 @@ class TwoCUModel(CompartmentModel):
     """
 
     def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1),
-                        startdict={'Fp': 50.0, 'v': 12.2, 'PS': 2.1}):
+                        startdict={'Fp': 51.0, 'v': 11.2, 'PS': 4.9}):
         CompartmentModel.__init__(self, time, curve, aif, startdict)
         # override the value of the compartment model:
         self.startdict = startdict
         self.nooffreeparameters=3
+        print "self._parameters 2CU{}".format(self._parameters)
     
     def __str__(self):
         return "2CU model"
@@ -856,7 +875,7 @@ class TwoCUModel(CompartmentModel):
                 FP_bootstrap = self.bootstrap_result_raw[0, i]  * 6000.0
                 TP_bootstrap = 1/self.bootstrap_result_raw[1,i]
                 E_bootstrap = self.bootstrap_result_raw[2, i] * 100.0
-                VP_bootstrap = TP_bootstrao*FP_bootstrap/(1.0-E_bootstrap) * 100.0
+                VP_bootstrap = TP_bootstrap*FP_bootstrap/(1.0-E_bootstrap) * 100.0
                 PS_bootstrap = E_bootstrap*FP_bootstrap/(1.0-E_bootstrap) * 6000.0
                 
                 self.bootstrap_result_physiological[:, i] = (
