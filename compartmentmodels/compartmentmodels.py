@@ -467,9 +467,6 @@ class CompartmentModel:
         self.fit = self.calc_modelfunction(self._parameters)
         self._fitted = fit_results.success
 
-        # print "Fit returned {} and yielded the parameters
-        # {}".format(fit_results.success, fit_results.x)
-
         return fit_results.success
 
     def get_AIC(self):
@@ -519,7 +516,7 @@ class CompartmentModel:
 
         # shapiro-wilk test for normaly distributed residuals
         w, p = sp.stats.shapiro(residuals_bootstrap)
-        print 'test statistic:', w, 'p-value:', p
+        #print 'test statistic:', w, 'p-value:', p
         if p < 0.05:
             raise ValueError(
                 'probably not normal distributed residuals. Try another model')
@@ -571,7 +568,6 @@ class TwoCXModel(CompartmentModel):
         # override the value of the compartment model:
         self.startdict = startdict
         self.nooffreeparameters = 4
-        print "self._parameters 2CX{}".format(self._parameters)
 
     def __str__(self):
         return "2CX model"
@@ -670,7 +666,7 @@ class TwoCXModel(CompartmentModel):
 
         PS = FP * (TB / TP - 1)
         VE = PS * TE
-        E = PS / (PS + FP) * 100.0
+        E = PS / (PS + FP) 
 
         self.readable_parameters["FP"] = FP * 6000.0
         self.readable_parameters["VP"] = FP * TB * 100.0
@@ -682,30 +678,20 @@ class TwoCXModel(CompartmentModel):
         # pseuo code
         if  self._parameters.any() < 0:
             print "Something went wrong with the constraints!"
-            
-        if any( v < 0 for v in self.readable_parameters.itervalues()):
-            print "something went wrong with the reaable parameters"
-            print self._parameters
-            print self.readable_parameters	
         
-        #print 'self.readable_parameters', self.readable_parameters
 
         if self._fitted:
             self.readable_parameters["Iterations"] = self.OptimizeResult.nit
-            
-            if any( v < 0 for v in self.readable_parameters.itervalues()):
-                print "something went wrong with the readable parameters"
-                print self._parameters
-                print self.readable_parameters	    
+    
 
         if self._bootstrapped:
             # convert bootstrapped_raw to boostrapped_physiological
             self.bootstrap_result_physiological = np.zeros((7, self.k))
             assert self.bootstrap_result_raw.shape[1] == self.k
             for i in range(self.k):
-                KP_bootstrap = self.bootstrap_result_raw[1, i]
-                KM_bootstrap = self.bootstrap_result_raw[
-                    3, i] - self.bootstrap_result_raw[1, i]
+                delta_bootstrap = self.bootstrap_result_raw[1, i]
+                KM_bootstrap = self.bootstrap_result_raw[3, i] 
+                KP_bootstrap = KM_bootstrap + delta_bootstrap
                 EM_bootstrap = self.bootstrap_result_raw[2, i]
                 FP_bootstrap = self.bootstrap_result_raw[0, i]
 
@@ -720,16 +706,22 @@ class TwoCXModel(CompartmentModel):
                 PS_bootstrap = FP_bootstrap * (TB_bootstrap / TP_bootstrap - 1)
                 VE_bootstrap = PS_bootstrap * TE_bootstrap
                 E_bootstrap = PS_bootstrap / \
-                    (PS_bootstrap + FP_bootstrap) * 100.0
+                    (PS_bootstrap + FP_bootstrap)
+                VP_bootstrap = FP_bootstrap * TB_bootstrap    
 
                 FP_bootstrap = FP_bootstrap * 6000.0
-                VP_bootstrap = FP_bootstrap * TB_bootstrap * 100.0
+                VP_bootstrap = VP_bootstrap * 100.0
                 PS_bootstrap = PS_bootstrap * 6000.0
                 VE_bootstrap = VE_bootstrap * 100.0
+        
                 self.bootstrap_result_physiological[:, i] = (
                     FP_bootstrap, VP_bootstrap, TP_bootstrap, E_bootstrap, PS_bootstrap, VE_bootstrap, TE_bootstrap)
-                #hier überprüfen nach zahlen die kleiner null sind
-                #und alles darüber der richtigen notation anpassen!
+                
+                #check for values < 0
+                if any( v < 0 for v in self.readable_parameters.itervalues()):
+                    print "something went wrong with the reaable parameters"
+                    print self._parameters
+                    print self.readable_parameters
                 
             self.bootstrap_percentile = np.percentile(
                 self.bootstrap_result_physiological, [17, 50, 83], axis=1)
@@ -742,10 +734,7 @@ class TwoCXModel(CompartmentModel):
                                                                         'PS': self.bootstrap_percentile[j, 4], 'VE': self.bootstrap_percentile[j, 5],
                                                                         'TE': self.bootstrap_percentile[j, 6]
                                                                         }
-            if any( v < 0 for v in self.readable_parameters.itervalues()):
-                print "something went wrong with the reaable parameters"
-                print self._parameters
-                print self.readable_parameters
+
         return self.readable_parameters
 
 
@@ -802,7 +791,6 @@ class TwoCUModel(CompartmentModel):
         # override the value of the compartment model:
         self.startdict = startdict
         self.nooffreeparameters=3
-        print "self._parameters 2CU{}".format(self._parameters)
     
     def __str__(self):
         return "2CU model"
@@ -860,7 +848,7 @@ class TwoCUModel(CompartmentModel):
         self.readable_parameters["VP"]=VP*100
         self.readable_parameters["TP"]=TP
         self.readable_parameters["PS"]=PS*6000
-        self.readable_parameters["E"]=E*100
+        self.readable_parameters["E"]=E
         #self.readable_parameters["VE"]=None
         #self.readable_parameters["TE"]=None
 
@@ -872,11 +860,15 @@ class TwoCUModel(CompartmentModel):
             self.bootstrap_result_physiological = np.zeros((5, self.k))
             assert self.bootstrap_result_raw.shape[1] == self.k
             for i in range(self.k):
-                FP_bootstrap = self.bootstrap_result_raw[0, i]  * 6000.0
+                FP_bootstrap = self.bootstrap_result_raw[0, i]
                 TP_bootstrap = 1/self.bootstrap_result_raw[1,i]
-                E_bootstrap = self.bootstrap_result_raw[2, i] * 100.0
-                VP_bootstrap = TP_bootstrap*FP_bootstrap/(1.0-E_bootstrap) * 100.0
-                PS_bootstrap = E_bootstrap*FP_bootstrap/(1.0-E_bootstrap) * 6000.0
+                E_bootstrap = self.bootstrap_result_raw[2, i]
+                VP_bootstrap = TP_bootstrap*FP_bootstrap/(1.0-E_bootstrap)
+                PS_bootstrap = E_bootstrap*FP_bootstrap/(1.0-E_bootstrap)
+                
+                FP_bootstrap=FP_bootstrap*6000
+                VP_bootstrap=VP_bootstrap*100
+                PS_bootstrap=PS_bootstrap*6000
                 
                 self.bootstrap_result_physiological[:, i] = (
                     FP_bootstrap, VP_bootstrap, TP_bootstrap, E_bootstrap, PS_bootstrap)
