@@ -718,10 +718,10 @@ class TwoCXModel(CompartmentModel):
                     FP_bootstrap, VP_bootstrap, TP_bootstrap, E_bootstrap, PS_bootstrap, VE_bootstrap, TE_bootstrap)
                 
                 #check for values < 0
-                if any( v < 0 for v in self.readable_parameters.itervalues()):
-                    print "something went wrong with the reaable parameters"
-                    print self._parameters
-                    print self.readable_parameters
+                #if any( v < 0 for v in self.readable_parameters.itervalues()):
+                  #  print "something went wrong with the reaable parameters"
+                   # print self._parameters
+                   # print self.readable_parameters
                 
             self.bootstrap_percentile = np.percentile(
                 self.bootstrap_result_physiological, [17, 50, 83], axis=1)
