@@ -30,6 +30,7 @@ Installation:
 
 Usage
 ------
+
 Using this library is simple: ::
 
   import compartmentmodels.compartmentmodels as CM
@@ -37,6 +38,8 @@ Using this library is simple: ::
   mm=CM.CompartmentModel(time=t, curve=c, aif=a)
   mm.fit_model(startdict={'F':100., 'v':10.})
   print mm.get_parameters()
+
+A demonstration can also be found in the accompanying ipython notebook.
 
 Development
 ---------
@@ -53,7 +56,7 @@ Development
 
 Features
 --------
-At the time being, this package provides a simple implementation of a one-compartment model. Currently, this module is under heavy development which follows, at least in parts, a test-driven approach.
+At the time being, this package provides  implementations of several tracer-kinetic models. Currently, this module is under heavy development which follows, at least in parts, a test-driven approach.
 
 Next milestone
 ---------
