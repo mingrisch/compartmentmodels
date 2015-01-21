@@ -32,21 +32,66 @@ def preparedmodel():
     
 
 @pytest.fixture(scope='module')
-def preparedmodel_noise():
-    """ prepare a model instance with startdict, time, aif and curve + additional background noise, ready for fitting
+def braindata():
+    """ prepare a model instance with startdict, time, aif and synthetic curve +
+    additional background noise, ready for fitting
     """
-
+    from compartmentmodels.compartmentmodels import loaddata, savedata
     from compartmentmodels.compartmentmodels import CompartmentModel
     startdict = {'F': 51.0, 'v': 11.2}
 
-    time = np.linspace(0, 50, 100)
-    aif = np.zeros_like(time)
-    aif[(time > 5) & (time < 10)] = 1.0
+    time, aif1, aif2 =loaddata(filename='tests/cerebralartery.csv')    
+    # remove baseline signal
+    aif = aif1 - aif1[0:5].mean()
     model = CompartmentModel(
-        time=time, curve=np.zeros_like(time), aif=aif, startdict=startdict)
+        time=time, curve=aif, aif=aif, startdict=startdict)
     # calculate a model curve
     model.curve = model.calc_modelfunction(model._parameters)
-    model.curve += 0.0001 * np.random.randn(len(time))
+    model.curve += 0.02 * aif.max() * np.random.randn(len(time))
+    # number of bootstraps
+    model.k=100  
+    
+    return model
+
+@pytest.fixture(scope='module')
+def lungdata():
+    """ prepare a model instance with startdict, time, aif and synthetic curve +
+    additional background noise, ready for fitting
+    """
+    from compartmentmodels.compartmentmodels import loaddata, savedata
+    from compartmentmodels.compartmentmodels import CompartmentModel
+    startdict = {'F': 51.0, 'v': 11.2}
+
+    t,c,a=loaddata(filename='tests/lung.csv')    
+    time = t
+    aif = a
+    curve = c
+    # remove baseline signal
+    aif = aif - aif[0:5].mean()
+    model = CompartmentModel(
+        time=time, curve=curve, aif=aif, startdict=startdict)
+    # calculate a model curve
+    model.curve = model.calc_modelfunction(model._parameters)
+    model.curve += 0.02 * aif.max() * np.random.randn(len(time))
+    return model
+
+@pytest.fixture(scope='module')
+def realcurve():
+    """ prepare a model instance with startdict, time, aif and real curve ready for
+    fitting
+    """
+    from compartmentmodels.compartmentmodels import loaddata, savedata
+    from compartmentmodels.compartmentmodels import CompartmentModel
+    startdict = {'F': 51.0, 'v': 11.2}
+
+    t,c,a=loaddata(filename='tests/lung.csv')    
+    time = t
+    aif = a
+    # remove baseline signal
+    curve = c - c[0:5].mean()
+    model = CompartmentModel(
+        time=time, curve=curve, aif=aif, startdict=startdict)
+    #model.curve += 0.002 * curve.max() * np.random.randn(len(time))
     return model
     
 
@@ -148,8 +193,8 @@ def do_not_test_genericModel_cpython_vs_fft_convolution(model):
         # this curve was calcualted with the cpython convolution
         curve = inarray[:, i + 2]
 
-        np.testing.assert_array_equal(model.convolution_w_exp(lam,
-                                                              fftconvolution=True), curve, verbose=False)
+        np.testing.assert_array_equal(model.convolution_w_exp(lam, fftconvolution=True),
+        curve,verbose=False)
 
 
 def do_not_test_genericModel_fftconvolution_equal_to_python_convolution(model):
@@ -169,9 +214,8 @@ def do_not_test_genericModel_fftconvolution_equal_to_python_convolution(model):
 
     for i, lam in enumerate(lamdalist):
 
-        np.testing.assert_array_equal(model.convolution_w_exp(lam,
-                                                              fftconvolution=True), model.convolution_w_exp(lam,
-                                                                                                            fftconvolution=False), verbose=False)
+        np.testing.assert_array_equal(model.convolution_w_exp(lam, fftconvolution=True),
+        model.convolution_w_exp(lam, fftconvolution=False),verbose=False)
 
 
 def test_genericModel_readableParameters_contain_all_keys(preparedmodel):
@@ -246,22 +290,80 @@ def test_genericModel_fit_model_determines_right_parameters(preparedmodel):
 
     assert np.allclose(preparedmodel._parameters, start_parameters)
 
+def test_genericModel_fit_model_determines_right_parameters(lungdata):
+    """ Are the fitted parameters the same as the initial parameters?
+    This might become a longer test case...
+    """
+
+    start_parameters=lungdata._parameters
+    return_value = lungdata.fit_model()
+    print lungdata.OptimizeResult
+    assert lungdata._fitted
+    #assert np.allclose(lungdata._parameters, start_parameters)
 
 
-def test_compartmentmodels_bootstrapping_right_output(preparedmodel_noise):
+def test_compartmentmodels_bootstrapping_output_dimension_and_type(lungdata):
     """ Is the dimension of the bootstrap_result equal to (2,k) 
     and the dimension of mean.- /std.bootstrap_result equal to (2,)?
-    Are parameters after bootstrapping in range of about 10% compared to fitted parameters?
+    Is the output of type dict?
+    Does the output dict contain 7 elements?
+    Are 'low estimate', 'mean estimate' and 'high estimate' subdicts in the output dict?
     """
-    preparedmodel_noise.k=300   
-    fit_result= preparedmodel_noise.fit_model()
-    bootstrap = preparedmodel_noise.bootstrap()
-    assert (preparedmodel_noise.bootstrap_result_raw.shape == (2,300))
-    assert (preparedmodel_noise.mean.shape == (3,))
-    assert (preparedmodel_noise.std.shape == (3,))
-    #assert np.allclose(preparedmodel_noise.mean, preparedmodel_noise._parameters, rtol=1e-01, atol=1e-01)
-    # calculates: absolute(a-b) <= (atol + rtol*absolute(b)) ;a,b array_like
+    lungdata.k=100   
+    fit_result= lungdata.fit_model()
+    bootstrap = lungdata.bootstrap()
+    assert (lungdata._bootstrapped == True)
+    assert (lungdata.bootstrap_result_raw.shape == (2,100))    
+    assert (type(lungdata.readable_parameters) == dict)
+    assert (len(lungdata.readable_parameters) == 7)   
+    assert ('low estimate' and 'high estimate' and 'mean estimate' in 
+            lungdata.readable_parameters)
+    assert (type(lungdata.readable_parameters['low estimate']) == dict and 
+            type(lungdata.readable_parameters['mean estimate']) == dict and
+            type(lungdata.readable_parameters['high estimate']) == dict)
+
+
+def test_compartmentmodels_bootstrapping_output_content(lungdata):    
+    """Is 'low estimate' < 'mean estimate' < 'high estimate'?
+    Are fittet Parameters in between 'low estimate' and 'high estimate'?
+    """
+    lungdata.k=102 
+    fit_result= lungdata.fit_model()
+    bootstrap = lungdata.bootstrap()
+    assert (lungdata.bootstrap_result_raw.shape ==(2, lungdata.k))
+    assert (lungdata._bootstrapped == True)
+    dict_fit={'F':lungdata.readable_parameters['F'],
+                'v':lungdata.readable_parameters['v'],
+                'MTT':lungdata.readable_parameters['MTT']
+                }
+    assert (lungdata.readable_parameters['low estimate'] <
+            lungdata.readable_parameters['mean estimate'])
+    assert (lungdata.readable_parameters['mean estimate'] <
+            lungdata.readable_parameters['high estimate'])
+    assert (lungdata.readable_parameters['low estimate'] < dict_fit)
+    assert (dict_fit < lungdata.readable_parameters['high estimate'])
+ 
+     
+def test_compartmentmodels_bootstrapping_output_content_braindata(braindata):    
+    """Is 'low estimate' < 'mean estimate' < 'high estimate'?
+    We investigate a cerebral aif here.
     
-    assert (type(preparedmodel_noise.readable_parameters) == dict)
-    assert (len(preparedmodel_noise.readable_parameters) == 7)
+    Are fitted Parameters in between 'low estimate' and 'high estimate'?
+    """
+    fit_result= braindata.fit_model()
+    bootstrap = braindata.bootstrap()
+    assert (braindata._bootstrapped == True)
+    dict_fit={'F':braindata.readable_parameters['F'],
+                'v':braindata.readable_parameters['v'],
+                'MTT':braindata.readable_parameters['MTT']
+                }
+    assert (braindata.readable_parameters['low estimate'] <
+            braindata.readable_parameters['mean estimate'])
+    assert (braindata.readable_parameters['mean estimate'] <
+            braindata.readable_parameters['high estimate'])
+    assert (braindata.readable_parameters['low estimate'] < dict_fit)
+    assert (dict_fit < braindata.readable_parameters['high estimate'])
+    
+    
+    
     

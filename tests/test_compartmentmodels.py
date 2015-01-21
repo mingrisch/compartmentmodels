@@ -18,7 +18,6 @@ import numpy as np
 
 
 from compartmentmodels.compartmentmodels import loaddata, savedata
-
 def test_load_and_save(tmpdir):
     time = np.linspace(0,100)
     curve= np.random.randn(len(time))
@@ -36,3 +35,12 @@ def test_load_and_save(tmpdir):
     assert np.all(np.equal(curve, c))
     assert np.all(np.equal(aif, a))
 
+    
+
+    
+    
+    
+    
+    
+    
+    
