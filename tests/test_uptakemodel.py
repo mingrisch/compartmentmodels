@@ -18,7 +18,7 @@ def TwoCUM():
     from compartmentmodels.compartmentmodels import TwoCUModel
     # need to set a stardict and convert input parameter maybe.
     # Set parameters for the model
-    startdict = {'FP': 31.0, 'VP': 11.2, 'PS': 4.9}
+    startdict = {'Fp': 31.0, 'vp': 11.2, 'PS': 4.9}
     time, aif1, aif2 = loaddata(filename='tests/cerebralartery.csv')
     aif = aif1 - aif1[0:5].mean()
     model = TwoCUModel(time=time, curve=aif, aif=aif, startdict=startdict)
@@ -36,7 +36,7 @@ def test_2CUM_fitting(TwoCUM):
     """
     assert len(TwoCUM.startdict) == 3
     true_values = TwoCUM.startdict.copy()
-    assert true_values == {'FP': 31.0, 'VP': 11.2, 'PS': 4.9}
+    assert true_values == {'Fp': 31.0, 'vp': 11.2, 'PS': 4.9}
     fit_result = TwoCUM.fit_model()
     fitparameters = TwoCUM.get_parameters()
     # assert number of parameters
@@ -46,7 +46,7 @@ def test_2CUM_fitting(TwoCUM):
     # assert number of fit parameters (t4)
 
     # to do : compare the fit results (<10% )
-    for parameter in ['FP', 'VP', 'PS']:
+    for parameter in ['Fp', 'vp', 'PS']:
 
         fit = fitparameters.get(parameter)
         true = true_values.get(parameter)

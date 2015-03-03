@@ -379,7 +379,7 @@ class CompartmentModel:
 
     def convert_startdict(self, startdict):
         """
-        Take a dictionary containing start values for FP,VP,PS,VE and
+        Take a dictionary containing start values for Fp,vp,PS,VE and
         calculate start values for the fitting. Save them in an array
         as required by calc_residuals. This function is meant to be
         implemented by each model.
@@ -397,13 +397,13 @@ class CompartmentModel:
         if not type(startdict).__name__ == 'dict':
             return
         # easy for the generic model:
-        FP = startdict.get("F") / 6000.  # we need to convert to SI
-        VP = startdict.get("v") / 100
-        lamda = 1. / (VP / FP)
+        Fp = startdict.get("F") / 6000.  # we need to convert to SI
+        vp = startdict.get("v") / 100
+        lamda = 1. / (vp / Fp)
 
         # store the parameters in self._parameters:
-        self._parameters = np.asarray([FP, lamda])
-        return np.asarray([FP, lamda])
+        self._parameters = np.asarray([Fp, lamda])
+        return np.asarray([Fp, lamda])
 
     def set_constraints(self, constrained):
         """ This function sets the contraints for fitting. 
@@ -556,7 +556,7 @@ class TwoCXModel(CompartmentModel):
 
     """
 
-    def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1), startdict={'FP': 51.0, 'VP': 11.2, 'PS': 4.9, 'VE': 13.2}):
+    def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1), startdict={'Fp': 51.0, 'vp': 11.2, 'PS': 4.9, 'VE': 13.2}):
         CompartmentModel.__init__(self, time, curve, aif, startdict)
         # override the value of the compartment model:
         self.startdict = startdict
@@ -603,14 +603,14 @@ class TwoCXModel(CompartmentModel):
 
         """
 
-        FP = startdict.get("FP") / 6000.
-        VP = startdict.get("VP") / 100.
+        Fp = startdict.get("Fp") / 6000.
+        vp = startdict.get("vp") / 100.
         PS = startdict.get("PS") / 6000.
         VE = startdict.get("VE") / 100.
 
-        TB = VP / FP
+        TB = vp / Fp
         TE = VE / PS
-        TP = VP / (PS + FP)
+        TP = vp / (PS + Fp)
 
         KP = 0.5 * \
             (1. / TP + 1. / TE +
@@ -621,8 +621,8 @@ class TwoCXModel(CompartmentModel):
         E = (KP - 1 / TB) / (KP - KM)
 
         delta = KP - KM
-        # parameters=[FP,delta,E,KM]
-        return [FP, delta, E, KM]
+        # parameters=[Fp,delta,E,KM]
+        return [Fp, delta, E, KM]
 
     def set_constraints(self, constrained):
         """ This function sets the contraints for fitting. 
@@ -642,7 +642,7 @@ class TwoCXModel(CompartmentModel):
 
     def get_parameters(self):
         """To be used after a successful fit.
-        returns a dictionary with keys FP, VP, TP, PS, VE, TE
+        returns a dictionary with keys Fp, vp, TP, PS, VE, TE
         conversion into physiological parameters follows sourbron, mrm09
         """
         # self._parameters=[Fp, delta, E, KM]
@@ -651,18 +651,18 @@ class TwoCXModel(CompartmentModel):
         KM = self._parameters[3]
         KP = KM + delta
         EM = self._parameters[2]
-        FP = self._parameters[0]
+        Fp = self._parameters[0]
 
         TB = 1.0 / (KP - EM * (KP - KM))
         TE = 1.0 / (TB * KP * KM)
         TP = 1.0 / (KP + KM - 1.0 / TE)
 
-        PS = FP * (TB / TP - 1)
+        PS = Fp * (TB / TP - 1)
         VE = PS * TE
-        E = PS / (PS + FP) 
+        E = PS / (PS + Fp) 
 
-        self.readable_parameters["FP"] = FP * 6000.0
-        self.readable_parameters["VP"] = FP * TB * 100.0
+        self.readable_parameters["Fp"] = Fp * 6000.0
+        self.readable_parameters["vp"] = Fp * TB * 100.0
         self.readable_parameters["TP"] = TP
         self.readable_parameters["E"] = E
         self.readable_parameters["PS"] = PS * 6000.0
@@ -686,7 +686,7 @@ class TwoCXModel(CompartmentModel):
                 KM_bootstrap = self.bootstrap_result_raw[3, i] 
                 KP_bootstrap = KM_bootstrap + delta_bootstrap
                 EM_bootstrap = self.bootstrap_result_raw[2, i]
-                FP_bootstrap = self.bootstrap_result_raw[0, i]
+                Fp_bootstrap = self.bootstrap_result_raw[0, i]
 
                 TB_bootstrap = 1.0 / \
                     (KP_bootstrap - EM_bootstrap *
@@ -696,19 +696,19 @@ class TwoCXModel(CompartmentModel):
                 TP_bootstrap = 1.0 / \
                     (KP_bootstrap + KM_bootstrap - 1.0 / TE_bootstrap)
 
-                PS_bootstrap = FP_bootstrap * (TB_bootstrap / TP_bootstrap - 1)
+                PS_bootstrap = Fp_bootstrap * (TB_bootstrap / TP_bootstrap - 1)
                 VE_bootstrap = PS_bootstrap * TE_bootstrap
                 E_bootstrap = PS_bootstrap / \
-                    (PS_bootstrap + FP_bootstrap)
-                VP_bootstrap = FP_bootstrap * TB_bootstrap    
+                    (PS_bootstrap + Fp_bootstrap)
+                vp_bootstrap = Fp_bootstrap * TB_bootstrap    
 
-                FP_bootstrap = FP_bootstrap * 6000.0
-                VP_bootstrap = VP_bootstrap * 100.0
+                Fp_bootstrap = Fp_bootstrap * 6000.0
+                vp_bootstrap = vp_bootstrap * 100.0
                 PS_bootstrap = PS_bootstrap * 6000.0
                 VE_bootstrap = VE_bootstrap * 100.0
         
                 self.bootstrap_result_physiological[:, i] = (
-                    FP_bootstrap, VP_bootstrap, TP_bootstrap, E_bootstrap, PS_bootstrap, VE_bootstrap, TE_bootstrap)
+                    Fp_bootstrap, vp_bootstrap, TP_bootstrap, E_bootstrap, PS_bootstrap, VE_bootstrap, TE_bootstrap)
                 
                 #check for values < 0
                 #if any( v < 0 for v in self.readable_parameters.itervalues()):
@@ -722,7 +722,7 @@ class TwoCXModel(CompartmentModel):
             result_name_list = [
                 'low estimate', 'mean estimate', 'high estimate']
             for j in range(len(result_name_list)):
-                self.readable_parameters["%s" % result_name_list[j]] = {'FP': self.bootstrap_percentile[j, 0], 'VP': self.bootstrap_percentile[j, 1],
+                self.readable_parameters["%s" % result_name_list[j]] = {'Fp': self.bootstrap_percentile[j, 0], 'vp': self.bootstrap_percentile[j, 1],
                                                                         'TP': self.bootstrap_percentile[j, 2], 'E': self.bootstrap_percentile[j, 3],
                                                                         'PS': self.bootstrap_percentile[j, 4], 'VE': self.bootstrap_percentile[j, 5],
                                                                         'TE': self.bootstrap_percentile[j, 6]
@@ -792,8 +792,8 @@ class TwoCUModel(CompartmentModel):
         """This function calculates the residuals for a two
         compartment uptake model with the residual function
         p[0]*((1-p[2])*exp[-t*p[1])+ p[2]), or, correspondingly,
-        FP*(exp(-t/TP)+ E(1-exp(-t/TP)))=
-        FP*((1-E)*exp(-t/TP)+E)"""
+        Fp*(exp(-t/TP)+ E(1-exp(-t/TP)))=
+        Fp*((1-E)*exp(-t/TP)+E)"""
         
         p=parameters
         modelcurve=p[0]*((1-p[2])*self.convolution_w_exp(p[1])+ 
@@ -802,15 +802,15 @@ class TwoCUModel(CompartmentModel):
         return modelcurve
 
     def convert_startdict(self,startdict):
-        FP=startdict.get("FP")/6000.
-        VP=startdict.get("VP")/100.
+        Fp=startdict.get("Fp")/6000.
+        vp=startdict.get("vp")/100.
         PS=startdict.get("PS")/6000.
         #VE=startdict.get("VE")/100.
         
-        E = PS/(PS+FP)
-        TP=VP/(PS+FP)
+        E = PS/(PS+Fp)
+        TP=vp/(PS+Fp)
         
-        return [FP,1./TP,E]
+        return [Fp,1./TP,E]
 
     def set_constraints(self, constrained):
         """ This function sets the contraints for fitting. 
@@ -828,17 +828,17 @@ class TwoCUModel(CompartmentModel):
             
     def get_parameters(self):
         """To be used after a successful fit.
-        returns a dictionary with keys FP, VP, TP, PS, VE, TE
+        returns a dictionary with keys Fp, vp, TP, PS, VE, TE
         conversion into physiological parameters follows sourbron, mrm09
         """
-        FP = self._parameters[0]
+        Fp = self._parameters[0]
         TP = 1./self._parameters[1]
         E  = self._parameters[2]
-        VP = TP*FP/(1.0 -E)
-        PS = E*FP/(1.0-E)
+        vp = TP*Fp/(1.0 -E)
+        PS = E*Fp/(1.0-E)
 
-        self.readable_parameters["FP"]=FP*6000
-        self.readable_parameters["VP"]=VP*100
+        self.readable_parameters["Fp"]=Fp*6000
+        self.readable_parameters["vp"]=vp*100
         self.readable_parameters["TP"]=TP
         self.readable_parameters["PS"]=PS*6000
         self.readable_parameters["E"]=E
@@ -853,18 +853,18 @@ class TwoCUModel(CompartmentModel):
             self.bootstrap_result_physiological = np.zeros((5, self.k))
             assert self.bootstrap_result_raw.shape[1] == self.k
             for i in range(self.k):
-                FP_bootstrap = self.bootstrap_result_raw[0, i]
+                Fp_bootstrap = self.bootstrap_result_raw[0, i]
                 TP_bootstrap = 1/self.bootstrap_result_raw[1,i]
                 E_bootstrap = self.bootstrap_result_raw[2, i]
-                VP_bootstrap = TP_bootstrap*FP_bootstrap/(1.0-E_bootstrap)
-                PS_bootstrap = E_bootstrap*FP_bootstrap/(1.0-E_bootstrap)
+                vp_bootstrap = TP_bootstrap*Fp_bootstrap/(1.0-E_bootstrap)
+                PS_bootstrap = E_bootstrap*Fp_bootstrap/(1.0-E_bootstrap)
                 
-                FP_bootstrap=FP_bootstrap*6000
-                VP_bootstrap=VP_bootstrap*100
+                Fp_bootstrap=Fp_bootstrap*6000
+                vp_bootstrap=vp_bootstrap*100
                 PS_bootstrap=PS_bootstrap*6000
                 
                 self.bootstrap_result_physiological[:, i] = (
-                    FP_bootstrap, VP_bootstrap, TP_bootstrap, E_bootstrap, PS_bootstrap)
+                    Fp_bootstrap, vp_bootstrap, TP_bootstrap, E_bootstrap, PS_bootstrap)
 
             self.bootstrap_percentile = np.percentile(
                 self.bootstrap_result_physiological, [17, 50, 83], axis=1)
@@ -872,7 +872,7 @@ class TwoCUModel(CompartmentModel):
             result_name_list = [
                 'low estimate', 'mean estimate', 'high estimate']
             for j in range(len(result_name_list)):
-                self.readable_parameters["%s" % result_name_list[j]] = {'FP': self.bootstrap_percentile[j, 0], 'VP': self.bootstrap_percentile[j, 1],
+                self.readable_parameters["%s" % result_name_list[j]] = {'Fp': self.bootstrap_percentile[j, 0], 'vp': self.bootstrap_percentile[j, 1],
                                                                         'TP': self.bootstrap_percentile[j, 2], 'E': self.bootstrap_percentile[j, 3],
                                                                         'PS': self.bootstrap_percentile[j, 4]
                                                                         }
