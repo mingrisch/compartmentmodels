@@ -4,10 +4,6 @@ import numpy as np
 import scipy as sp
 from scipy import stats
 from scipy.optimize import minimize
-import matplotlib.pyplot as plt
-import pandas as pd
-from pandas.tools.plotting import autocorrelation_plot
-import seaborn as sns
 # helper functions for saving and loading 'model datasets'
 
 
@@ -539,9 +535,6 @@ class CompartmentModel:
         self.readable_parameters = original_readable_parameters
         self._bootstrapped = True
 
-        #plt.plot(self.time, self.curve)
-        #plt.plot(self.time, self.fit)
-        #plt.show()
 
         return self.get_parameters()
 
