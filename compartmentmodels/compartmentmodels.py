@@ -407,7 +407,9 @@ class CompartmentModel:
 
     def set_constraints(self, constrained):
         """ This function sets the contraints for fitting. 
-        """
+
+        Do we really ned this function? I mean, we always use positivity
+        constraints, don't we?  """
 
         self.constrained = constrained
 
@@ -493,7 +495,6 @@ class CompartmentModel:
         Returns:
         -------
         This needs to be discussed. Set the parameter dictionary appropriately?
-        Store the bootstrap estimates internally in the class? 
         """
 
         if not self._fitted:
@@ -520,6 +521,11 @@ class CompartmentModel:
         # array, which will be overwritten with the results
         self.bootstrap_result_raw = np.zeros((len(self._parameters), self.k))
 
+        # todo: self.bootstrap_result should contain the physiological
+        # parameters, derived from the fit parameters by self._fit_to_phys, or
+        # whatever.
+        
+
         # bootstrapping loop
         for i in range(self.k):
             sample_index = np.random.randint(
@@ -527,8 +533,9 @@ class CompartmentModel:
             self.curve = original_fit + residuals_bootstrap[sample_index]
             self.fit_model(original_readable_parameters)
             self.bootstrap_result_raw[:, i] = self._parameters
+            # todo: here, we need the conversion to physiological parameters
 
-        # rechange variables
+        # restore variables
         self.curve = original_curve
         self.fit = original_fit
         self._parameters = original_parameters
