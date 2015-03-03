@@ -95,26 +95,26 @@ def realcurve():
     return model
     
 
-def test_genericModel_has_string_representation(model):
+def test_compartmentModel_has_string_representation(model):
     str_rep=model.__str__()
     
     assert str_rep # an empty string is False, all others are True
 
 
 
-def test_genericModel_set_and_get_time(model):
+def test_compartmentModel_set_and_get_time(model):
     time = sp.linspace(0, 20, 50)
     model.set_time(time)
     np.testing.assert_array_equal(model.get_time(), time, verbose=False)
 
 
-def test_genericModel_set_and_get_aif(model):
+def test_compartmentModel_set_and_get_aif(model):
     aif = np.random.randn(50)
     model.set_aif(aif)
     np.testing.assert_array_equal(model.get_aif(), aif, verbose=False)
 
 
-def test_genericModel_set_and_get_curve(model):
+def test_compartmentModel_set_and_get_curve(model):
     curve = np.random.rand(50)
     model.set_curve(curve)
     np.testing.assert_array_equal(model.get_curve(), curve, verbose=False)
@@ -122,7 +122,7 @@ def test_genericModel_set_and_get_curve(model):
 
 
 
-def test_genericModel_python_convolution(model):
+def test_compartmentModel_python_convolution(model):
     # load a curve that was calculated with pmi
     # 'aif' is a boxcar function;
     testfile = 'tests/convolutions.csv'
@@ -147,7 +147,7 @@ def test_genericModel_python_convolution(model):
 
 
 
-def test_genericModel_convolution_with_exponential_zero(preparedmodel):
+def test_compartmentModel_convolution_with_exponential_zero(preparedmodel):
     """ Convolution with an exponential with time constant zero.
 
     the default implementation will crash here
@@ -157,7 +157,7 @@ def test_genericModel_convolution_with_exponential_zero(preparedmodel):
 
     np.testing.assert_array_equal(int_vector, conv_w_zero)
 
-def test_genericModel_fftconvolution_with_exponential_zero(preparedmodel):
+def test_compartmentModel_fftconvolution_with_exponential_zero(preparedmodel):
     """ Convolution with an exponential with time constant zero.
 
     the default implementation will crash here
@@ -167,7 +167,7 @@ def test_genericModel_fftconvolution_with_exponential_zero(preparedmodel):
 
     np.testing.assert_array_equal(int_vector, conv_w_zero)
     
-def do_not_test_genericModel_cpython_vs_fft_convolution(model):
+def do_not_test_compartmentModel_cpython_vs_fft_convolution(model):
     """ TEst whether a fft convolution yields the same result as the cpython
     implementation of the discrete convolution
 
@@ -197,7 +197,7 @@ def do_not_test_genericModel_cpython_vs_fft_convolution(model):
         curve,verbose=False)
 
 
-def do_not_test_genericModel_fftconvolution_equal_to_python_convolution(model):
+def do_not_test_compartmentModel_fftconvolution_equal_to_python_convolution(model):
     """ Test whether sp.fftconvolve yields a similar result to the discrete
     convolution
     to do: this is currently not tested - we need some research first (issue #17)
@@ -218,10 +218,10 @@ def do_not_test_genericModel_fftconvolution_equal_to_python_convolution(model):
         model.convolution_w_exp(lam, fftconvolution=False),verbose=False)
 
 
-def test_genericModel_readableParameters_contain_all_keys(preparedmodel):
+def test_compartmentModel_readableParameters_contain_all_keys(preparedmodel):
     assert all([k in preparedmodel.readable_parameters for k in ("F", "v")])
 
-def test_genericModel_fit_model_returns_bool(preparedmodel):
+def test_compartmentModel_fit_model_returns_bool(preparedmodel):
     """Test whether the fit routine reports sucess of fitting
     """
 
@@ -230,7 +230,7 @@ def test_genericModel_fit_model_returns_bool(preparedmodel):
     assert (isinstance(return_value, bool))
 
 
-def test_genericModel_start_parameter_conversion(preparedmodel):
+def test_compartmentModel_start_parameter_conversion(preparedmodel):
     """ are the startparameters converted correctly to raw parameters?
 
     First, we check manually.
@@ -248,7 +248,7 @@ def test_genericModel_start_parameter_conversion(preparedmodel):
     
 
 
-def test_genericModel_parameter_conversion(preparedmodel):
+def test_compartmentModel_parameter_conversion(preparedmodel):
     """ check the conversions from physiological to raw, and back
     """
     
@@ -264,7 +264,7 @@ def test_genericModel_parameter_conversion(preparedmodel):
             assert False, "Key {} is not contained in readable dictionary".format(key)
 
 
-def test_genericModel_startdict_is_saved_appropriately(preparedmodel):
+def test_compartmentModel_startdict_is_saved_appropriately(preparedmodel):
     """ is the startdict from constructor saved correctly?
     """
 
@@ -280,7 +280,7 @@ def test_genericModel_startdict_is_saved_appropriately(preparedmodel):
 
 
 
-def test_genericModel_fit_model_determines_right_parameters(preparedmodel):
+def test_compartmentModel_fit_model_determines_right_parameters(preparedmodel):
     """ Are the fitted parameters the same as the initial parameters?
     This might become a longer test case...
     """
@@ -290,7 +290,7 @@ def test_genericModel_fit_model_determines_right_parameters(preparedmodel):
 
     assert np.allclose(preparedmodel._parameters, start_parameters)
 
-def test_genericModel_fit_model_determines_right_parameters(lungdata):
+def test_compartmentModel_fit_model_determines_right_parameters(lungdata):
     """ Are the fitted parameters the same as the initial parameters?
     This might become a longer test case...
     """
