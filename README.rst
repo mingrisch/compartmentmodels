@@ -44,20 +44,27 @@ A demonstration can also be found in the accompanying ipython notebook.
 Development
 ---------
 
+* fork the repository
+
 * Look for an issue that needs to be adressed
 
-* write a test for this issue in the tests/ directory (hint: simply extend tests/test_genericmodel.py)
+* write a test for this issue in the tests/ directory (hint: simply extend one of the test_* files) 
 
 * Run the tests: py.test
   
 * modify the code until the test passes
 
-* and commit 
+* commit and file a pull request 
+  
+Note: Currently, the developers have not much experience with this form of collaboration. Please contact us if you wish to contribute, we are more than happy about contributors, and we are willing to learn :)
 
 Features
 --------
-At the time being, this package provides  implementations of several tracer-kinetic models. Currently, this module is under heavy development which follows, at least in parts, a test-driven approach.
+At the time being, this package provides  implementations of several tracer-kinetic models. Currently, this module is being developed, following a test-driven approach (well, we try).
 
 Next milestone
 ---------
-The next (and first) milestone is to reach a working implementation that does not depend on external numeric packages.
+
+The next milestone will be Release 0.1, with working implementations of the two-compartment exchange model, the compartment uptake model and the one-compartment model.
+
+
