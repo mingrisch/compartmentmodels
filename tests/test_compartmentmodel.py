@@ -102,25 +102,6 @@ def test_compartmentModel_has_string_representation(model):
 
 
 
-def test_compartmentModel_set_and_get_time(model):
-    time = sp.linspace(0, 20, 50)
-    model.set_time(time)
-    np.testing.assert_array_equal(model.get_time(), time, verbose=False)
-
-
-def test_compartmentModel_set_and_get_aif(model):
-    aif = np.random.randn(50)
-    model.set_aif(aif)
-    np.testing.assert_array_equal(model.get_aif(), aif, verbose=False)
-
-
-def test_compartmentModel_set_and_get_curve(model):
-    curve = np.random.rand(50)
-    model.set_curve(curve)
-    np.testing.assert_array_equal(model.get_curve(), curve, verbose=False)
-
-
-
 
 def test_compartmentModel_python_convolution(model):
     # load a curve that was calculated with pmi
@@ -137,8 +118,8 @@ def test_compartmentModel_python_convolution(model):
     time = inarray[:, 0]
     aif = inarray[:, 1]
 
-    model.set_time(time)
-    model.set_aif(aif)
+    model.time=time
+    model.aif=aif
 
     for i, lam in enumerate(lamdalist):
         curve = inarray[:, i + 2]

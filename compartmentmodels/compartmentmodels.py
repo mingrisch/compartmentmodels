@@ -196,53 +196,6 @@ class CompartmentModel:
 
         return self.readable_parameters
 
-    def get_raw_parameters(self):
-        # I don't think we ever need this function.
-        print "Deprecation warning: this function is deprecated and will be removed"
-        return self._parameters
-
-    def get_aif(self):
-        print "Deprecation warning: this function is deprecated and will be removed"
-        return self.aif
-
-    def get_curve(self):
-        print "Deprecation warning: this function is deprecated and will be removed"
-        return self.curve
-
-    def get_time(self):
-        print "Deprecation warning: this function is deprecated and will be removed"
-        return self.time
-
-    def get_residuals(self):
-        print "Deprecation warning: this function is deprecated and will be removed"
-        return self.residuals
-
-    def get_fit(self):
-        print "Deprecation warning: this function is deprecated and will be removed"
-        return self.fit
-
-    # set functions:
-    def set_parameters(self, newparameters):
-        """
-        I am not sure whether this function should even exist.
-
-        self._parameters should only be calculated internally.
-        """
-        print "Deprecation warning: this function is deprecated and will be removed"
-        self._parameters = newparameters
-
-    def set_time(self, newtime):
-        print "Deprecation warning: this function is deprecated and will be removed"
-        self.time = newtime
-
-    def set_curve(self, newcurve):
-        print "Deprecation warning: this function is deprecated and will be removed"
-        self.curve = newcurve
-
-    def set_aif(self, newaif):
-        print "Deprecation warning: this function is deprecated and will be removed"
-        self.aif = newaif
-
     # convolution of aif with an exponential
     def convolution_w_exp(self, lamda, fftconvolution=False):
         """ Convolution of self.aif with an exponential.
