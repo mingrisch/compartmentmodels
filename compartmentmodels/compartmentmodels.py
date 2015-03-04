@@ -109,7 +109,7 @@ class CompartmentModel:
     """
 
     def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1),
-                 startdict={'F': 50.0, 'v': 12.2}, use_cython=False):
+                 startdict={'F': 50.0, 'v': 12.2}, use_cython=True):
         # todo: typecheck for time, curve, aif
         # they should be numpy.ndarrays with the same size and dtype float
         self.time = time

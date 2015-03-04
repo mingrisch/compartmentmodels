@@ -307,7 +307,7 @@ def test_compartmentmodels_bootstrapping_output_dimension_and_type(lungdata):
 
 def test_compartmentmodels_bootstrapping_output_content(lungdata):    
     """Is 'low estimate' < 'mean estimate' < 'high estimate'?
-    Are fittet Parameters in between 'low estimate' and 'high estimate'?
+    Are fitted Parameters in between 'low estimate' and 'high estimate'?
     """
     lungdata.k=102 
     fit_result= lungdata.fit_model()
@@ -357,20 +357,18 @@ def test_compartmentmodel_cython_convolution_equal_to_python(preparedmodel):
 
     curve = preparedmodel.calc_modelfunction(preparedmodel._parameters)
 
-    assert np.allequal(originalcurve, curve)
+    assert np.allclose(original_curve, curve)
     
     
 def test_compartmentmodel_cython_is_faster_than_python(preparedmodel):
     """ Is the cython implementation faster than the python implementation? """
 
     # to do: how do we get the execution time=?
-    preparedmodel_use_cython=False
+    preparedmodel._use_cython=False
 
-    pythontime= timeit.timeit(preparedmodel.calc_modelfunction(preparedmodel._parameters), number = 1000)
-    # preparedmodel._use_cython=True
-    # cythontime= preparedmodel.calc_modelfunction(preparedmodel._parameters)
-    print pythontime
-    assert False
-
-    # assert cythontime<pythontime
+    pythontime= timeit.timeit(lambda:preparedmodel.calc_modelfunction(preparedmodel._parameters), number = 1000)
+    preparedmodel._use_cython=True
+    cythontime= timeit.timeit(lambda:preparedmodel.calc_modelfunction(preparedmodel._parameters), number=1000)
+    print "Python:  {}; Cython: {}".format(pythontime, cythontime)
+    assert cythontime<pythontime
 
