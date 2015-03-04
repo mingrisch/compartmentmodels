@@ -4,6 +4,12 @@ import numpy as np
 import scipy as sp
 from scipy import stats
 from scipy.optimize import minimize
+
+# cython: 
+import pyximport; pyximport.install()
+
+import c_convolution_exp
+
 # helper functions for saving and loading 'model datasets'
 
 
@@ -84,7 +90,7 @@ class CompartmentModel:
         array of raw parameters, used internally for the calculation of model
         fits
 
-    _cython_available: bool
+    _use_cython: bool
         do we have cython, or use it?
         Currently, cython is not used, but this may change. 
 
@@ -103,7 +109,7 @@ class CompartmentModel:
     """
 
     def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1),
-                 startdict={'F': 50.0, 'v': 12.2}):
+                 startdict={'F': 50.0, 'v': 12.2}, use_cython=False):
         # todo: typecheck for time, curve, aif
         # they should be numpy.ndarrays with the same size and dtype float
         self.time = time
@@ -115,7 +121,7 @@ class CompartmentModel:
         self._parameters = np.zeros(2)
 
         self.k = 500
-        self._cythonavailable = False
+        self._use_cython = use_cython
         self._fitted = False
         self._bootstrapped = False
 
@@ -243,11 +249,10 @@ class CompartmentModel:
 
             return y
 
-        elif self._cythonavailable:
+        elif self._use_cython:
             # calculcate the discrete  convolution with the cpython
             # implementation
-            pass
-            # y = cy_conv_exp(self.time, self.curve, self.aif, lamda)
+            return  c_convolution_exp.c_convolution_exp(self.time, self.aif, lamda)
         else:
 
             # calculate the discrete convolution in pure python

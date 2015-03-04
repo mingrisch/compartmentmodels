@@ -2,7 +2,7 @@ import pytest
 import scipy as sp
 import numpy as np
 
-
+import timeit
 
 # set up a fixture for the Compartment model
 
@@ -52,6 +52,7 @@ def braindata():
     model.k=100  
     
     return model
+
 
 @pytest.fixture(scope='module')
 def lungdata():
@@ -345,6 +346,31 @@ def test_compartmentmodels_bootstrapping_output_content_braindata(braindata):
     assert (braindata.readable_parameters['low estimate'] < dict_fit)
     assert (dict_fit < braindata.readable_parameters['high estimate'])
     
+def test_compartmentmodel_cython_convolution_equal_to_python(preparedmodel):
+    """ Does the cython convolution yield the same result as the python implementation?
+
+    And how much faster ist is, anyway?
+    """
+    original_curve = preparedmodel.curve
+
+    preparedmodel._use_cython=True
+
+    curve = preparedmodel.calc_modelfunction(preparedmodel._parameters)
+
+    assert np.allequal(originalcurve, curve)
     
     
-    
+def test_compartmentmodel_cython_is_faster_than_python(preparedmodel):
+    """ Is the cython implementation faster than the python implementation? """
+
+    # to do: how do we get the execution time=?
+    preparedmodel_use_cython=False
+
+    pythontime= timeit.timeit(preparedmodel.calc_modelfunction(preparedmodel._parameters), number = 1000)
+    # preparedmodel._use_cython=True
+    # cythontime= preparedmodel.calc_modelfunction(preparedmodel._parameters)
+    print pythontime
+    assert False
+
+    # assert cythontime<pythontime
+
