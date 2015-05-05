@@ -435,7 +435,6 @@ class CompartmentModel:
             ss = np.sum(np.square(self.residuals))
 
             aic = n* np.log(ss/n) + 2*(npar+1) + 2*(npar+1)*(npar+2)/(n-npar-2)
-            print "Hello from get_AIC. N: {}.Free parameters: {}. AIC: {}. SS: {}".format(n, npar, aic, np.sum(np.square(self.residuals)))
             return aic
         else:
             return False
