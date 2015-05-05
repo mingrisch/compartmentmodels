@@ -346,6 +346,41 @@ def test_compartmentmodels_bootstrapping_output_content_braindata(braindata):
     assert (braindata.readable_parameters['low estimate'] < dict_fit)
     assert (dict_fit < braindata.readable_parameters['high estimate'])
     
+def test_AIC_higher_for_complex_models():
+    """ in a one-compartment-situation, a model with more than one compartment  should have a higher AIC value
+    """
+    from compartmentmodels.compartmentmodels import TwoCXModel, TwoCUModel, CompartmentModel
+    from compartmentmodels.compartmentmodels import loaddata
+    
+    startdict = {'F': 31.0, 'v': 4.2}
+
+    time, aif1, aif2 =loaddata(filename='tests/cerebralartery.csv')    
+    # remove baseline signal
+    aif = aif1 - aif1[0:5].mean()
+    ocm = CompartmentModel(
+        time=time, curve=aif, aif=aif, startdict={'F': 31.0, 'v': 4.2})
+    # calculate a model curve
+    ocm.curve = ocm.calc_modelfunction(ocm._parameters)
+    ocm.curve += 0.02 * ocm.curve.max() * np.random.randn(len(time))
+    
+    ocm.fit_model()
+    aic_1c=ocm.get_AIC()
+
+
+    twocxm = TwoCXModel(
+        time=time, curve=ocm.curve, aif=aif, startdict={'Fp': 31.0, 'vp': 4.2, 'PS':0.001, 've':11.2})
+    twocxm.fit_model()
+    aic_2cx = twocxm.get_AIC()
+
+    twocum = TwoCUModel(
+        time=time, curve=ocm.curve, aif=aif, startdict={'Fp': 31.0, 'vp': 4.2, 'PS':0.001, 've':11.2})
+    twocum.fit_model()
+    aic_2cu = twocum.get_AIC()
+    assert (aic_1c < aic_2cx)
+    assert (aic_1c < aic_2cu)
+    assert (aic_2cu < aic_2cx)
+
+    
 def test_compartmentmodel_cython_convolution_equal_to_python(preparedmodel):
     """ Does the cython convolution yield the same result as the python implementation?
 

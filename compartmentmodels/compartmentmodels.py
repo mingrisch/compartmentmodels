@@ -337,7 +337,7 @@ class CompartmentModel:
 
     def convert_startdict(self, startdict):
         """
-        Take a dictionary containing start values for Fp,vp,PS,VE and
+        Take a dictionary containing start values for Fp,vp,PS,ve and
         calculate start values for the fitting. Save them in an array
         as required by calc_residuals. This function is meant to be
         implemented by each model.
@@ -432,12 +432,10 @@ class CompartmentModel:
         if self._fitted:
             n = self.fit.size
             npar = len(self._parameters)
+            ss = np.sum(np.square(self.residuals))
 
-            aic = n * sp.log(sp.sum(sp.square(self.residuals)) / n)
-            +2 * (npar + 1)
-            +2 * (npar + 1) * \
-                (npar + 2) / \
-                (n - npar - 2)
+            aic = n* np.log(ss/n) + 2*(npar+1) + 2*(npar+1)*(npar+2)/(n-npar-2)
+            print "Hello from get_AIC. N: {}.Free parameters: {}. AIC: {}. SS: {}".format(n, npar, aic, np.sum(np.square(self.residuals)))
             return aic
         else:
             return False
@@ -521,7 +519,7 @@ class TwoCXModel(CompartmentModel):
 
     """
 
-    def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1), startdict={'Fp': 51.0, 'vp': 11.2, 'PS': 4.9, 'VE': 13.2}):
+    def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1), startdict={'Fp': 51.0, 'vp': 11.2, 'PS': 4.9, 've': 13.2}):
         CompartmentModel.__init__(self, time, curve, aif, startdict)
         # override the value of the compartment model:
         self.startdict = startdict
@@ -571,10 +569,10 @@ class TwoCXModel(CompartmentModel):
         Fp = startdict.get("Fp") / 6000.
         vp = startdict.get("vp") / 100.
         PS = startdict.get("PS") / 6000.
-        VE = startdict.get("VE") / 100.
+        ve = startdict.get("ve") / 100.
 
         TB = vp / Fp
-        TE = VE / PS
+        TE = ve / PS
         TP = vp / (PS + Fp)
 
         KP = 0.5 * \
@@ -607,7 +605,7 @@ class TwoCXModel(CompartmentModel):
 
     def get_parameters(self):
         """To be used after a successful fit.
-        returns a dictionary with keys Fp, vp, TP, PS, VE, TE
+        returns a dictionary with keys Fp, vp, TP, PS, ve, TE
         conversion into physiological parameters follows sourbron, mrm09
         """
         # self._parameters=[Fp, delta, E, KM]
@@ -623,7 +621,7 @@ class TwoCXModel(CompartmentModel):
         TP = 1.0 / (KP + KM - 1.0 / TE)
 
         PS = Fp * (TB / TP - 1)
-        VE = PS * TE
+        ve = PS * TE
         E = PS / (PS + Fp) 
 
         self.readable_parameters["Fp"] = Fp * 6000.0
@@ -631,7 +629,7 @@ class TwoCXModel(CompartmentModel):
         self.readable_parameters["TP"] = TP
         self.readable_parameters["E"] = E
         self.readable_parameters["PS"] = PS * 6000.0
-        self.readable_parameters["VE"] = VE * 100.0
+        self.readable_parameters["ve"] = ve * 100.0
         self.readable_parameters["TE"] = TE
         # pseuo code
         if  self._parameters.any() < 0:
@@ -662,7 +660,7 @@ class TwoCXModel(CompartmentModel):
                     (KP_bootstrap + KM_bootstrap - 1.0 / TE_bootstrap)
 
                 PS_bootstrap = Fp_bootstrap * (TB_bootstrap / TP_bootstrap - 1)
-                VE_bootstrap = PS_bootstrap * TE_bootstrap
+                ve_bootstrap = PS_bootstrap * TE_bootstrap
                 E_bootstrap = PS_bootstrap / \
                     (PS_bootstrap + Fp_bootstrap)
                 vp_bootstrap = Fp_bootstrap * TB_bootstrap    
@@ -670,10 +668,10 @@ class TwoCXModel(CompartmentModel):
                 Fp_bootstrap = Fp_bootstrap * 6000.0
                 vp_bootstrap = vp_bootstrap * 100.0
                 PS_bootstrap = PS_bootstrap * 6000.0
-                VE_bootstrap = VE_bootstrap * 100.0
+                ve_bootstrap = ve_bootstrap * 100.0
         
                 self.bootstrap_result_physiological[:, i] = (
-                    Fp_bootstrap, vp_bootstrap, TP_bootstrap, E_bootstrap, PS_bootstrap, VE_bootstrap, TE_bootstrap)
+                    Fp_bootstrap, vp_bootstrap, TP_bootstrap, E_bootstrap, PS_bootstrap, ve_bootstrap, TE_bootstrap)
                 
                 #check for values < 0
                 #if any( v < 0 for v in self.readable_parameters.itervalues()):
@@ -689,7 +687,7 @@ class TwoCXModel(CompartmentModel):
             for j in range(len(result_name_list)):
                 self.readable_parameters["%s" % result_name_list[j]] = {'Fp': self.bootstrap_percentile[j, 0], 'vp': self.bootstrap_percentile[j, 1],
                                                                         'TP': self.bootstrap_percentile[j, 2], 'E': self.bootstrap_percentile[j, 3],
-                                                                        'PS': self.bootstrap_percentile[j, 4], 'VE': self.bootstrap_percentile[j, 5],
+                                                                        'PS': self.bootstrap_percentile[j, 4], 've': self.bootstrap_percentile[j, 5],
                                                                         'TE': self.bootstrap_percentile[j, 6]
                                                                         }
 
@@ -770,7 +768,7 @@ class TwoCUModel(CompartmentModel):
         Fp=startdict.get("Fp")/6000.
         vp=startdict.get("vp")/100.
         PS=startdict.get("PS")/6000.
-        #VE=startdict.get("VE")/100.
+        #ve=startdict.get("ve")/100.
         
         E = PS/(PS+Fp)
         TP=vp/(PS+Fp)
@@ -793,7 +791,7 @@ class TwoCUModel(CompartmentModel):
             
     def get_parameters(self):
         """To be used after a successful fit.
-        returns a dictionary with keys Fp, vp, TP, PS, VE, TE
+        returns a dictionary with keys Fp, vp, TP, PS, ve, TE
         conversion into physiological parameters follows sourbron, mrm09
         """
         Fp = self._parameters[0]
@@ -807,7 +805,7 @@ class TwoCUModel(CompartmentModel):
         self.readable_parameters["TP"]=TP
         self.readable_parameters["PS"]=PS*6000
         self.readable_parameters["E"]=E
-        #self.readable_parameters["VE"]=None
+        #self.readable_parameters["ve"]=None
         #self.readable_parameters["TE"]=None
 
         if self._fitted:

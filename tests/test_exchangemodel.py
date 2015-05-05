@@ -18,7 +18,7 @@ def TwoCXM():
     from compartmentmodels.compartmentmodels import TwoCXModel
     # need to set a stardict and convert input parameter maybe.
     # Set parameters for the model
-    startdict = {'Fp': 31.0, 'vp': 11.2, 'PS': 4.9, 'VE': 13.2}
+    startdict = {'Fp': 31.0, 'vp': 11.2, 'PS': 4.9, 've': 13.2}
     time, aif1, aif2 = loaddata(filename='tests/cerebralartery.csv')
     aif = aif1 - aif1[0:5].mean()
     model = TwoCXModel(time=time, curve=aif, aif=aif, startdict=startdict)
@@ -36,7 +36,7 @@ def test_2CXM_fitting(TwoCXM):
     """
     assert len(TwoCXM.startdict) == 4
     true_values = TwoCXM.startdict.copy()
-    assert true_values == {'Fp': 31.0, 'vp': 11.2, 'PS': 4.9, 'VE': 13.2}
+    assert true_values == {'Fp': 31.0, 'vp': 11.2, 'PS': 4.9, 've': 13.2}
     fit_result = TwoCXM.fit_model()
     fitparameters = TwoCXM.get_parameters()
     # assert number of parameters
@@ -46,7 +46,7 @@ def test_2CXM_fitting(TwoCXM):
     # assert number of fit parameters (t4)
 
     # to do : compare the fit results (<10% )
-    for parameter in ['Fp', 'vp', 'PS', 'VE']:
+    for parameter in ['Fp', 'vp', 'PS', 've']:
 
         fit = fitparameters.get(parameter)
         true = true_values.get(parameter)
@@ -66,7 +66,7 @@ def test_2CXM_fitting(TwoCXM):
 #                 'TP':TwoCXM.readable_parameters['TP'],
 #                 'E':TwoCXM.readable_parameters['E'],
 #                 'PS':TwoCXM.readable_parameters['PS'],
-#                 'VE':TwoCXM.readable_parameters['VE'],
+#                 've':TwoCXM.readable_parameters['ve'],
 #                 'TE':TwoCXM.readable_parameters['TE'],
 #                     }
 #     assert (TwoCXM.readable_parameters['low estimate'] <
