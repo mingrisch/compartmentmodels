@@ -6,9 +6,16 @@ from scipy import stats
 from scipy.optimize import minimize
 
 # cython: 
-import pyximport; pyximport.install()
+try: 
+    import pyximport; pyximport.install()
 
-import c_convolution_exp
+    import c_convolution_exp
+    cython_available=True
+
+except: 
+    # cython import has not worked:
+    cython_available = False
+    print "Cython is apparently not available. Continuing without..."
 
 # helper functions for saving and loading 'model datasets'
 
@@ -109,7 +116,7 @@ class CompartmentModel:
     """
 
     def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1),
-                 startdict={'F': 50.0, 'v': 12.2}, use_cython=True):
+                 startdict={'F': 50.0, 'v': 12.2}, use_cython=cython_available):
         # todo: typecheck for time, curve, aif
         # they should be numpy.ndarrays with the same size and dtype float
         self.time = time
