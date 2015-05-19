@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-import scipy as sp
+#import scipy as sp
 from scipy import stats
 from scipy.optimize import minimize
 
@@ -115,7 +115,7 @@ class CompartmentModel:
 
     """
 
-    def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1),
+    def __init__(self, time=np.empty(1), curve=np.empty(1), aif=np.empty(1),
                  startdict={'F': 50.0, 'v': 12.2}, use_cython=cython_available):
         # todo: typecheck for time, curve, aif
         # they should be numpy.ndarrays with the same size and dtype float
@@ -123,7 +123,7 @@ class CompartmentModel:
         self.aif = aif
         self.curve = curve
         self.residuals = curve
-        self.fit = sp.zeros_like(curve)
+        self.fit = np.zeros_like(curve)
         self.aic = 0.0
         self._parameters = np.zeros(2)
 
@@ -283,7 +283,7 @@ class CompartmentModel:
                 y[i] = edt * y[i - 1] + (x[i - 1] - m * t[i - 1]) / lamda * (
                     1 - edt) + m / lamda / lamda * ((lamda * t[i] - 1) - edt * (lamda * t[i - 1] - 1))
             return y
-        # return sp.asarray(y)
+        # return np.asarray(y)
 
     def intvector(self):
         """This function calculates the convolution of the arterial
@@ -295,9 +295,9 @@ class CompartmentModel:
 
         ysum = y[1:] + y[0:-1]
         # dx=x[1:]-x[0:-1]
-        dx = sp.diff(x)
-        integral = sp.zeros_like(x)
-        integral[1:] = sp.cumsum(ysum * dx / 2)
+        dx = np.diff(x)
+        integral = np.zeros_like(x)
+        integral[1:] = np.cumsum(ysum * dx / 2)
 
         return integral
 
@@ -474,7 +474,7 @@ class CompartmentModel:
         residuals_bootstrap = (self.curve - self.fit)
 
         # shapiro-wilk test for normaly distributed residuals
-        w, p = sp.stats.shapiro(residuals_bootstrap)
+        w, p = stats.shapiro(residuals_bootstrap)
         #print 'test statistic:', w, 'p-value:', p
         if p < 0.05:
             raise ValueError(
@@ -525,7 +525,7 @@ class TwoCXModel(CompartmentModel):
 
     """
 
-    def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1), startdict={'Fp': 51.0, 'vp': 11.2, 'PS': 4.9, 've': 13.2}):
+    def __init__(self, time=np.empty(1), curve=np.empty(1), aif=np.empty(1), startdict={'Fp': 51.0, 'vp': 11.2, 'PS': 4.9, 've': 13.2}):
         CompartmentModel.__init__(self, time, curve, aif, startdict)
         # override the value of the compartment model:
         self.startdict = startdict
@@ -583,10 +583,10 @@ class TwoCXModel(CompartmentModel):
 
         KP = 0.5 * \
             (1. / TP + 1. / TE +
-             sp.sqrt(sp.square(1. / TP + 1. / TE) - 4. / TE / TB))
+             np.sqrt(np.square(1. / TP + 1. / TE) - 4. / TE / TB))
         KM = 0.5 * \
             (1. / TP + 1. / TE -
-             sp.sqrt(sp.square(1. / TP + 1. / TE) - 4. / TE / TB))
+             np.sqrt(np.square(1. / TP + 1. / TE) - 4. / TE / TB))
         E = (KP - 1 / TB) / (KP - KM)
 
         delta = KP - KM
@@ -747,7 +747,7 @@ class TwoCUModel(CompartmentModel):
 
     """
 
-    def __init__(self, time=sp.empty(1), curve=sp.empty(1), aif=sp.empty(1),
+    def __init__(self, time=np.empty(1), curve=np.empty(1), aif=np.empty(1),
                         startdict={'Fp': 51.0, 'v': 11.2, 'PS': 4.9}):
         CompartmentModel.__init__(self, time, curve, aif, startdict)
         # override the value of the compartment model:
@@ -859,8 +859,8 @@ if __name__ == '__main__':
     # inputs. one could, in principle, load this dataset.
     # but we don't have one yet.
 
-    time = sp.linspace(0, tmax, num=npt)
-    aif = sp.square(time) * sp.exp(-time / 2)
+    time = np.linspace(0, tmax, num=npt)
+    aif = np.square(time) * np.exp(-time / 2)
     curve = aif * 0.0
     # aif=aif.astype('float64')
     # curve=curve.astype('float64')
@@ -868,10 +868,10 @@ if __name__ == '__main__':
 
     # generate an aif with recirculation:
     recirculation1 = gptmp.convolution_w_exp(1. / 8.) / 8
-    recirculation1 = sp.roll(recirculation1, 10 * 4)
+    recirculation1 = np.roll(recirculation1, 10 * 4)
     recirculation1[0:10 * 4] = 0
     recirculation2 = gptmp.convolution_w_exp(100.) / 100
-    recirculation2 = sp.roll(recirculation2, 20 * 4)
+    recirculation2 = np.roll(recirculation2, 20 * 4)
     recirculation2[0:20 * 4] = 0
     aif = aif + recirculation1 + recirculation2
     gptmp.aif = aif
@@ -879,7 +879,7 @@ if __name__ == '__main__':
     true_values = {"F": 45.0, "v": 10.0}
     true_parameters = gptmp.convert_startdict(true_values)
     curve = true_parameters[0] * gptmp.convolution_w_exp(true_parameters[1])
-    max_curve = sp.amax(curve)
+    max_curve = np.amax(curve)
     # to do: what the hell is this:
     noise = 0.08 * max_curve * (np.random.randn(len(curve)))
     curve = curve + noise
