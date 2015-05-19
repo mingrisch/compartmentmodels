@@ -38,7 +38,7 @@ def test_2CXM_fitting(TwoCXM):
     true_values = TwoCXM.startdict.copy()
     assert true_values == {'Fp': 31.0, 'vp': 11.2, 'PS': 4.9, 've': 13.2}
     fit_result = TwoCXM.fit_model()
-    fitparameters = TwoCXM.get_parameters()
+    fittedparameters = TwoCXM.phys_parameters
     # assert number of parameters
     assert len(TwoCXM._fitparameters) == 4
     assert len(TwoCXM.phys_parameters) == 8
@@ -48,7 +48,7 @@ def test_2CXM_fitting(TwoCXM):
     # to do : compare the fit results (<10% )
     for parameter in ['Fp', 'vp', 'PS', 've']:
 
-        fit = fitparameters.get(parameter)
+        fit = fittedparameters.get(parameter)
         true = true_values.get(parameter)
 
         assert (fit - true) / true < 0.1

@@ -38,7 +38,7 @@ def test_2CUM_fitting(TwoCUM):
     true_values = TwoCUM.startdict.copy()
     assert true_values == {'Fp': 31.0, 'vp': 11.2, 'PS': 4.9}
     fit_result = TwoCUM.fit_model()
-    fitparameters = TwoCUM.get_parameters()
+    fitparameters = TwoCUM._fit_to_phys()
     # assert number of parameters
     assert len(TwoCUM._fitparameters) == 3
     assert len(TwoCUM.phys_parameters) == 6
