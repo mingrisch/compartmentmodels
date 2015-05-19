@@ -27,12 +27,12 @@ def preparedmodel():
     model = CompartmentModel(
         time=time, curve=np.zeros_like(time), aif=aif, startdict=startdict)
     # calculate a model curve
-    model.curve = model.calc_modelfunction(model._parameters)
+    model.curve = model.calc_modelfunction(model._fitparameters)
     return model
     
 
 @pytest.fixture(scope='module')
-def braindata():
+def brainaif_onec():
     """ prepare a model instance with startdict, time, aif and synthetic curve +
     additional background noise, ready for fitting
     """
@@ -46,16 +46,16 @@ def braindata():
     model = CompartmentModel(
         time=time, curve=aif, aif=aif, startdict=startdict)
     # calculate a model curve
-    model.curve = model.calc_modelfunction(model._parameters)
+    model.curve = model.calc_modelfunction(model._fitparameters)
     model.curve += 0.02 * aif.max() * np.random.randn(len(time))
     # number of bootstraps
-    model.k=100  
+    model.k=500  
     
     return model
 
 
 @pytest.fixture(scope='module')
-def lungdata():
+def lungaif_onec():
     """ prepare a model instance with startdict, time, aif and synthetic curve +
     additional background noise, ready for fitting
     """
@@ -72,7 +72,7 @@ def lungdata():
     model = CompartmentModel(
         time=time, curve=curve, aif=aif, startdict=startdict)
     # calculate a model curve
-    model.curve = model.calc_modelfunction(model._parameters)
+    model.curve = model.calc_modelfunction(model._fitparameters)
     model.curve += 0.02 * aif.max() * np.random.randn(len(time))
     return model
 
@@ -201,7 +201,7 @@ def do_not_test_compartmentModel_fftconvolution_equal_to_python_convolution(mode
 
 
 def test_compartmentModel_readableParameters_contain_all_keys(preparedmodel):
-    assert all([k in preparedmodel.readable_parameters for k in ("F", "v")])
+    assert all([k in preparedmodel.phys_parameters for k in ("F", "v")])
 
 def test_compartmentModel_fit_model_returns_bool(preparedmodel):
     """Test whether the fit routine reports sucess of fitting
@@ -224,10 +224,17 @@ def test_compartmentModel_start_parameter_conversion(preparedmodel):
     raw_vol=original_startdict.get("v") / 100
     lamda= raw_flow/raw_vol
 
-    par=preparedmodel._parameters
+    par=preparedmodel._fitparameters
     assert (par[0] == raw_flow) & (par[1] == lamda)
 
     
+def test_compartmentmodel_fit_to_phys_returns_list_when_requested(preparedmodel):
+    """ Does model._fit_to_phys return a list or a dictionary, as expected?
+    """
+    return_list = preparedmodel._fit_to_phys(aslist=True)
+    assert (type(return_list) == list)
+    return_none = preparedmodel._fit_to_phys()
+    assert (type(return_none) == type(None))
 
 
 def test_compartmentModel_parameter_conversion(preparedmodel):
@@ -235,13 +242,16 @@ def test_compartmentModel_parameter_conversion(preparedmodel):
     """
     
     original_startdict= {'F': 51.0, 'v': 11.2}
-    raw_par= preparedmodel._parameters
+    raw_par= preparedmodel._fitparameters
+
     
-    readable_dict= preparedmodel.get_parameters()
+    # convert the fit parameters to physiological parameters 
+    preparedmodel._fit_to_phys() 
+    phys_parameters= preparedmodel.phys_parameters
     # test whether the dictionaries contain i) the same keys and ii) the corresponding values are equal. All keys from the start dict have to be in the output dict. Additionally, the readable_dict may contain additional keys, which are not checked.
     for key, value in original_startdict.iteritems():
-        if key in readable_dict:
-            assert np.allclose(original_startdict.get(key) , readable_dict.get(key))
+        if key in phys_parameters:
+            assert np.allclose(original_startdict.get(key) , phys_parameters.get(key))
         else:
             assert False, "Key {} is not contained in readable dictionary".format(key)
 
@@ -251,7 +261,7 @@ def test_compartmentModel_startdict_is_saved_appropriately(preparedmodel):
     """
 
     original_startdict = {'F': 51.0, 'v': 11.2}
-    readable_dict=preparedmodel.readable_parameters
+    readable_dict=preparedmodel.phys_parameters
     # we need to check whether all original keys/values are contained in the model parameter dict:
     for key, value in original_startdict.iteritems():
         if key in readable_dict:
@@ -267,84 +277,84 @@ def test_compartmentModel_fit_model_determines_right_parameters(preparedmodel):
     This might become a longer test case...
     """
 
-    start_parameters=preparedmodel._parameters
+    start_parameters=preparedmodel._fitparameters
     return_value = preparedmodel.fit_model()
 
-    assert np.allclose(preparedmodel._parameters, start_parameters)
+    assert np.allclose(preparedmodel._fitparameters, start_parameters)
 
-def test_compartmentModel_fit_model_determines_right_parameters(lungdata):
+def test_compartmentModel_fit_model_determines_right_parameters(lungaif_onec):
     """ Are the fitted parameters the same as the initial parameters?
     This might become a longer test case...
     """
 
-    start_parameters=lungdata._parameters
-    return_value = lungdata.fit_model()
-    print lungdata.OptimizeResult
-    assert lungdata._fitted
-    #assert np.allclose(lungdata._parameters, start_parameters)
+    start_parameters=lungaif_onec._fitparameters
+    return_value = lungaif_onec.fit_model()
+    print lungaif_onec.OptimizeResult
+    assert lungaif_onec._fitted
+    #assert np.allclose(lungaif_onec._fitparameters, start_parameters)
 
 
-def test_compartmentmodels_bootstrapping_output_dimension_and_type(lungdata):
+def test_compartmentmodels_bootstrapping_output_dimension_and_type(lungaif_onec):
     """ Is the dimension of the bootstrap_result equal to (2,k) 
     and the dimension of mean.- /std.bootstrap_result equal to (2,)?
     Is the output of type dict?
     Does the output dict contain 7 elements?
     Are 'low estimate', 'mean estimate' and 'high estimate' subdicts in the output dict?
     """
-    lungdata.k=100   
-    fit_result= lungdata.fit_model()
-    bootstrap = lungdata.bootstrap()
-    assert (lungdata._bootstrapped == True)
-    assert (lungdata.bootstrap_result_raw.shape == (2,100))    
-    assert (type(lungdata.readable_parameters) == dict)
-    assert (len(lungdata.readable_parameters) == 7)   
+    lungaif_onec.k=100   
+    fit_result= lungaif_onec.fit_model()
+    bootstrap = lungaif_onec.bootstrap()
+    assert (lungaif_onec._bootstrapped == True)
+    assert (lungaif_onec.bootstrap_result.shape == (3,100))    
+    assert (type(lungaif_onec.phys_parameters) == dict)
+    assert (len(lungaif_onec.phys_parameters) == 7)   
     assert ('low estimate' and 'high estimate' and 'mean estimate' in 
-            lungdata.readable_parameters)
-    assert (type(lungdata.readable_parameters['low estimate']) == dict and 
-            type(lungdata.readable_parameters['mean estimate']) == dict and
-            type(lungdata.readable_parameters['high estimate']) == dict)
+            lungaif_onec.phys_parameters)
+    assert (type(lungaif_onec.phys_parameters['low estimate']) == dict and 
+            type(lungaif_onec.phys_parameters['mean estimate']) == dict and
+            type(lungaif_onec.phys_parameters['high estimate']) == dict)
 
 
-def test_compartmentmodels_bootstrapping_output_content(lungdata):    
+def test_compartmentmodels_bootstrapping_output_content(lungaif_onec):    
     """Is 'low estimate' < 'mean estimate' < 'high estimate'?
     Are fitted Parameters in between 'low estimate' and 'high estimate'?
     """
-    lungdata.k=102 
-    fit_result= lungdata.fit_model()
-    bootstrap = lungdata.bootstrap()
-    assert (lungdata.bootstrap_result_raw.shape ==(2, lungdata.k))
-    assert (lungdata._bootstrapped == True)
-    dict_fit={'F':lungdata.readable_parameters['F'],
-                'v':lungdata.readable_parameters['v'],
-                'MTT':lungdata.readable_parameters['MTT']
+    lungaif_onec.k=100 
+    fit_result= lungaif_onec.fit_model()
+    bootstrap = lungaif_onec.bootstrap()
+    assert (lungaif_onec.bootstrap_result.shape ==(3, lungaif_onec.k))
+    assert (lungaif_onec._bootstrapped == True)
+    dict_fit={'F':lungaif_onec.phys_parameters['F'],
+                'v':lungaif_onec.phys_parameters['v'],
+                'MTT':lungaif_onec.phys_parameters['MTT']
                 }
-    assert (lungdata.readable_parameters['low estimate'] <
-            lungdata.readable_parameters['mean estimate'])
-    assert (lungdata.readable_parameters['mean estimate'] <
-            lungdata.readable_parameters['high estimate'])
-    assert (lungdata.readable_parameters['low estimate'] < dict_fit)
-    assert (dict_fit < lungdata.readable_parameters['high estimate'])
+    assert (lungaif_onec.phys_parameters['low estimate'] <
+            lungaif_onec.phys_parameters['mean estimate'])
+    assert (lungaif_onec.phys_parameters['mean estimate'] <
+            lungaif_onec.phys_parameters['high estimate'])
+    assert (lungaif_onec.phys_parameters['low estimate'] < dict_fit)
+    assert (dict_fit < lungaif_onec.phys_parameters['high estimate'])
  
      
-def test_compartmentmodels_bootstrapping_output_content_braindata(braindata):    
+def test_compartmentmodels_bootstrapping_output_content_brainaif_onec(brainaif_onec):    
     """Is 'low estimate' < 'mean estimate' < 'high estimate'?
     We investigate a cerebral aif here.
     
     Are fitted Parameters in between 'low estimate' and 'high estimate'?
     """
-    fit_result= braindata.fit_model()
-    bootstrap = braindata.bootstrap()
-    assert (braindata._bootstrapped == True)
-    dict_fit={'F':braindata.readable_parameters['F'],
-                'v':braindata.readable_parameters['v'],
-                'MTT':braindata.readable_parameters['MTT']
+    fit_result= brainaif_onec.fit_model()
+    bootstrap = brainaif_onec.bootstrap()
+    assert (brainaif_onec._bootstrapped == True)
+    dict_fit={'F':brainaif_onec.phys_parameters['F'],
+                'v':brainaif_onec.phys_parameters['v'],
+                'MTT':brainaif_onec.phys_parameters['MTT']
                 }
-    assert (braindata.readable_parameters['low estimate'] <
-            braindata.readable_parameters['mean estimate'])
-    assert (braindata.readable_parameters['mean estimate'] <
-            braindata.readable_parameters['high estimate'])
-    assert (braindata.readable_parameters['low estimate'] < dict_fit)
-    assert (dict_fit < braindata.readable_parameters['high estimate'])
+    assert (brainaif_onec.phys_parameters['low estimate'] <
+            brainaif_onec.phys_parameters['mean estimate'])
+    assert (brainaif_onec.phys_parameters['mean estimate'] <
+            brainaif_onec.phys_parameters['high estimate'])
+    assert (brainaif_onec.phys_parameters['low estimate'] < dict_fit)
+    assert (dict_fit < brainaif_onec.phys_parameters['high estimate'])
     
 def test_AIC_higher_for_complex_models():
     """ in a one-compartment-situation, a model with more than one compartment  should have a higher AIC value
@@ -360,7 +370,7 @@ def test_AIC_higher_for_complex_models():
     ocm = CompartmentModel(
         time=time, curve=aif, aif=aif, startdict={'F': 31.0, 'v': 4.2})
     # calculate a model curve
-    ocm.curve = ocm.calc_modelfunction(ocm._parameters)
+    ocm.curve = ocm.calc_modelfunction(ocm._fitparameters)
     ocm.curve += 0.02 * ocm.curve.max() * np.random.randn(len(time))
     
     ocm.fit_model()
@@ -390,7 +400,7 @@ def test_compartmentmodel_cython_convolution_equal_to_python(preparedmodel):
 
     preparedmodel._use_cython=True
 
-    curve = preparedmodel.calc_modelfunction(preparedmodel._parameters)
+    curve = preparedmodel.calc_modelfunction(preparedmodel._fitparameters)
 
     assert np.allclose(original_curve, curve)
     
@@ -401,9 +411,9 @@ def test_compartmentmodel_cython_is_faster_than_python(preparedmodel):
     # to do: how do we get the execution time=?
     preparedmodel._use_cython=False
 
-    pythontime= timeit.timeit(lambda:preparedmodel.calc_modelfunction(preparedmodel._parameters), number = 1000)
+    pythontime= timeit.timeit(lambda:preparedmodel.calc_modelfunction(preparedmodel._fitparameters), number = 1000)
     preparedmodel._use_cython=True
-    cythontime= timeit.timeit(lambda:preparedmodel.calc_modelfunction(preparedmodel._parameters), number=1000)
+    cythontime= timeit.timeit(lambda:preparedmodel.calc_modelfunction(preparedmodel._fitparameters), number=1000)
     print "Python:  {}; Cython: {}".format(pythontime, cythontime)
     assert cythontime<pythontime
 
