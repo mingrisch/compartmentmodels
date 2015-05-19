@@ -634,25 +634,33 @@ class TwoCXModel(CompartmentModel):
         KM = self._fitparameters[3]
         KP = KM + delta
         EM = self._fitparameters[2]
-        Fp = self._fitparameters[0]
+        Fp = self._fitparameters[0] 
 
         TB = 1.0 / (KP - EM * (KP - KM))
         TE = 1.0 / (TB * KP * KM)
         TP = 1.0 / (KP + KM - 1.0 / TE)
 
         PS = Fp * (TB / TP - 1)
-        ve = PS * TE
+        ve = PS * TE 
         E = PS / (PS + Fp)
+
+        vp = Fp*TB 
+
+        # convert to conventional units:
+        Fp = 6000. * Fp
+        PS = 6000. * PS
+        vp = 100. * vp
+        ve = 100. *ve
 
         if aslist:
             return [Fp, vp, TP, PS, ve, TE]
 
-        self.phys_parameters["Fp"] = Fp * 6000.0
-        self.phys_parameters["vp"] = Fp * TB * 100.0
+        self.phys_parameters["Fp"] = Fp 
+        self.phys_parameters["vp"] = vp
         self.phys_parameters["TP"] = TP
         self.phys_parameters["E"] = E
-        self.phys_parameters["PS"] = PS * 6000.0
-        self.phys_parameters["ve"] = ve * 100.0
+        self.phys_parameters["PS"] = PS 
+        self.phys_parameters["ve"] = ve 
         self.phys_parameters["TE"] = TE
 
         if self._fitted:
@@ -663,7 +671,7 @@ class TwoCXModel(CompartmentModel):
             result_name_list = [
                 'low estimate', 'mean estimate', 'high estimate']
 
-            for estimate in result_name_list:
+            for j, estimate in enumerate(result_name_list):
                 self.phys_parameters[estimate] = {
                     'Fp': self.bootstrap_percentile[j, 0],
                     'vp': self.bootstrap_percentile[j, 1],
@@ -753,6 +761,7 @@ class TwoCUModel(CompartmentModel):
         PS = startdict.get("PS") / 6000.
         # ve=startdict.get("ve")/100.
 
+
         E = PS / (PS + Fp)
         TP = vp / (PS + Fp)
 
@@ -777,22 +786,28 @@ class TwoCUModel(CompartmentModel):
         converts fitted parameters to physiological parameters. Results are stored in  dictionary self.phys_parameters with keys Fp, vp, TP, PS, ve, TE
         conversion into physiological parameters follows sourbron, mrm09
         """
-        Fp = self._fitparameters[0]
+        Fp = self._fitparameters[0] 
         TP = 1. / self._fitparameters[1]
         E = self._fitparameters[2]
-        vp = TP * Fp / (1.0 - E)
+        vp = TP * Fp / (1.0 - E) 
         PS = E * Fp / (1.0 - E)
 
-        self.phys_parameters["Fp"] = Fp * 6000
-        self.phys_parameters["vp"] = vp * 100
+        # convert to conventional units (ml/100ml, ml/100ml/min)
+        Fp = 6000. * Fp
+        vp = 100. * vp
+        PS = 6000. * PS
+
+        if aslist:
+            return[Fp,vp,TP,PS,E]
+
+        self.phys_parameters["Fp"] = Fp 
+        self.phys_parameters["vp"] = vp
         self.phys_parameters["TP"] = TP
-        self.phys_parameters["PS"] = PS * 6000
+        self.phys_parameters["PS"] = PS 
         self.phys_parameters["E"] = E
         # self.phys_parameters["ve"]=None
         # self.phys_parameters["TE"]=None
         
-        if aslist:
-            return[Fp,vp,TP,PS,E]
 
         if self._fitted:
             self.phys_parameters["Iterations"] = self.OptimizeResult.nit
@@ -821,10 +836,10 @@ class TwoCUModel(CompartmentModel):
 
             result_name_list = [
                 'low estimate', 'mean estimate', 'high estimate']
-            for estimate in result_name_list:
-                self.phys_parameters[estimate] = {'Fp': self.bootstrap_percentile[j, 0], 'vp': self.bootstrap_percentile[j, 1],
-                                                                    'TP': self.bootstrap_percentile[j, 2], 'E': self.bootstrap_percentile[j, 3],
-                                                                    'PS': self.bootstrap_percentile[j, 4]
+            for i, estimate in enumerate(result_name_list):
+                self.phys_parameters[estimate] = {'Fp': self.bootstrap_percentile[i, 0], 'vp': self.bootstrap_percentile[i, 1],
+                                                                    'TP': self.bootstrap_percentile[i, 2], 'E': self.bootstrap_percentile[i, 3],
+                                                                    'PS': self.bootstrap_percentile[i, 4]
                                                                     }
 
         return self.phys_parameters
