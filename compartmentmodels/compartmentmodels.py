@@ -93,19 +93,18 @@ class CompartmentModel:
     aic: float
         Akaike information criterion, after a fit
 
-    _parameters: np.ndarray
+    _fitparameters: np.ndarray
         array of raw parameters, used internally for the calculation of model
         fits
 
     _use_cython: bool
         do we have cython, or use it?
-        Currently, cython is not used, but this may change. 
 
 
     _fitted: bool
         has a fit been performed?
 
-    readable_parameters: dict
+    phys_parameters: dict
         Dictionary of physiological parameters. These can be used as start
         parameters for the fit, and are calculated from self._fitparameters after
         a successfull fit
@@ -135,7 +134,7 @@ class CompartmentModel:
         # Perform convolution using fft or linear interpolation?
         self.fft = False
         # this dictionary will contain human-readable (parameter,value) entries
-        self.readable_parameters = startdict
+        self.phys_parameters = startdict
 
         # this will store the OptimizeResult object
         self.OptimizeResult = None
@@ -156,7 +155,7 @@ class CompartmentModel:
 
         To be used after a successful fit.
         Converts the 'raw' fit parameters to the 'physiological' model
-        parameters and saves them in self.readable_parameters.
+        parameters and saves them in self.phys_parameters.
         Parameters
         ----------
         None
@@ -178,12 +177,12 @@ class CompartmentModel:
         v = self._fitparameters[0] / self._fitparameters[1] * 100
         mtt = 1 / self._fitparameters[1]
 
-        self.readable_parameters["F"] = F
-        self.readable_parameters["v"] = v
-        self.readable_parameters["MTT"] = mtt
+        self.phys_parameters["F"] = F
+        self.phys_parameters["v"] = v
+        self.phys_parameters["MTT"] = mtt
 
         if self._fitted:
-            self.readable_parameters["Iterations"] = self.OptimizeResult.nit
+            self.phys_parameters["Iterations"] = self.OptimizeResult.nit
 
         if self._bootstrapped:
             # convert bootstrapped_raw to boostrapped_physiological
@@ -200,14 +199,14 @@ class CompartmentModel:
             self.bootstrap_percentile = np.percentile(
                 self.bootstrap_result_physiological, [17, 50, 83], axis=1)
 
-            self.readable_parameters["low estimate"] = {'F': self.bootstrap_percentile[
+            self.phys_parameters["low estimate"] = {'F': self.bootstrap_percentile[
                 0, 0], 'v': self.bootstrap_percentile[0, 1], 'MTT': self.bootstrap_percentile[0, 2]}
-            self.readable_parameters["mean estimate"] = {'F': self.bootstrap_percentile[
+            self.phys_parameters["mean estimate"] = {'F': self.bootstrap_percentile[
                 1, 0], 'v': self.bootstrap_percentile[1, 1], 'MTT': self.bootstrap_percentile[1, 2]}
-            self.readable_parameters["high estimate"] = {'F': self.bootstrap_percentile[
+            self.phys_parameters["high estimate"] = {'F': self.bootstrap_percentile[
                 2, 0], 'v': self.bootstrap_percentile[2, 1], 'MTT': self.bootstrap_percentile[2, 2]}
 
-        return self.readable_parameters
+        return self.phys_parameters
 
     # convolution of aif with an exponential
     def convolution_w_exp(self, lamda, fftconvolution=False):
@@ -468,7 +467,7 @@ class CompartmentModel:
         original_curve = self.curve
         original_fit = self.fit
         original_parameters = self._fitparameters
-        original_readable_parameters = self.readable_parameters
+        original_phys_parameters = self.phys_parameters
 
         # set of residuals calculated for bootstrapping
         residuals_bootstrap = (self.curve - self.fit)
@@ -493,7 +492,7 @@ class CompartmentModel:
             sample_index = np.random.randint(
                 0, residuals_bootstrap.shape[0], residuals_bootstrap.shape)
             self.curve = original_fit + residuals_bootstrap[sample_index]
-            self.fit_model(original_readable_parameters)
+            self.fit_model(original_phys_parameters)
             self.bootstrap_result_raw[:, i] = self._fitparameters
             # todo: here, we need the conversion to physiological parameters
 
@@ -501,7 +500,7 @@ class CompartmentModel:
         self.curve = original_curve
         self.fit = original_fit
         self._fitparameters = original_parameters
-        self.readable_parameters = original_readable_parameters
+        self.phys_parameters = original_phys_parameters
         self._bootstrapped = True
 
 
@@ -630,20 +629,20 @@ class TwoCXModel(CompartmentModel):
         ve = PS * TE
         E = PS / (PS + Fp) 
 
-        self.readable_parameters["Fp"] = Fp * 6000.0
-        self.readable_parameters["vp"] = Fp * TB * 100.0
-        self.readable_parameters["TP"] = TP
-        self.readable_parameters["E"] = E
-        self.readable_parameters["PS"] = PS * 6000.0
-        self.readable_parameters["ve"] = ve * 100.0
-        self.readable_parameters["TE"] = TE
+        self.phys_parameters["Fp"] = Fp * 6000.0
+        self.phys_parameters["vp"] = Fp * TB * 100.0
+        self.phys_parameters["TP"] = TP
+        self.phys_parameters["E"] = E
+        self.phys_parameters["PS"] = PS * 6000.0
+        self.phys_parameters["ve"] = ve * 100.0
+        self.phys_parameters["TE"] = TE
         # pseuo code
         if  self._fitparameters.any() < 0:
             print "Something went wrong with the constraints!"
         
 
         if self._fitted:
-            self.readable_parameters["Iterations"] = self.OptimizeResult.nit
+            self.phys_parameters["Iterations"] = self.OptimizeResult.nit
     
 
         if self._bootstrapped:
@@ -680,10 +679,10 @@ class TwoCXModel(CompartmentModel):
                     Fp_bootstrap, vp_bootstrap, TP_bootstrap, E_bootstrap, PS_bootstrap, ve_bootstrap, TE_bootstrap)
                 
                 #check for values < 0
-                #if any( v < 0 for v in self.readable_parameters.itervalues()):
+                #if any( v < 0 for v in self.phys_parameters.itervalues()):
                   #  print "something went wrong with the reaable parameters"
                    # print self._fitparameters
-                   # print self.readable_parameters
+                   # print self.phys_parameters
                 
             self.bootstrap_percentile = np.percentile(
                 self.bootstrap_result_physiological, [17, 50, 83], axis=1)
@@ -691,13 +690,13 @@ class TwoCXModel(CompartmentModel):
             result_name_list = [
                 'low estimate', 'mean estimate', 'high estimate']
             for j in range(len(result_name_list)):
-                self.readable_parameters["%s" % result_name_list[j]] = {'Fp': self.bootstrap_percentile[j, 0], 'vp': self.bootstrap_percentile[j, 1],
+                self.phys_parameters["%s" % result_name_list[j]] = {'Fp': self.bootstrap_percentile[j, 0], 'vp': self.bootstrap_percentile[j, 1],
                                                                         'TP': self.bootstrap_percentile[j, 2], 'E': self.bootstrap_percentile[j, 3],
                                                                         'PS': self.bootstrap_percentile[j, 4], 've': self.bootstrap_percentile[j, 5],
                                                                         'TE': self.bootstrap_percentile[j, 6]
                                                                         }
 
-        return self.readable_parameters
+        return self.phys_parameters
 
 
 class TwoCUModel(CompartmentModel):
@@ -739,7 +738,7 @@ class TwoCUModel(CompartmentModel):
     _fitted: bool
         has a fit been performed?
 
-    readable_parameters: dict
+    phys_parameters: dict
         Dictionary of physiological parameters. These can be used as start
         parameters for the fit, and are calculated from self._fitparameters after
         a successfull fit
@@ -806,16 +805,16 @@ class TwoCUModel(CompartmentModel):
         vp = TP*Fp/(1.0 -E)
         PS = E*Fp/(1.0-E)
 
-        self.readable_parameters["Fp"]=Fp*6000
-        self.readable_parameters["vp"]=vp*100
-        self.readable_parameters["TP"]=TP
-        self.readable_parameters["PS"]=PS*6000
-        self.readable_parameters["E"]=E
-        #self.readable_parameters["ve"]=None
-        #self.readable_parameters["TE"]=None
+        self.phys_parameters["Fp"]=Fp*6000
+        self.phys_parameters["vp"]=vp*100
+        self.phys_parameters["TP"]=TP
+        self.phys_parameters["PS"]=PS*6000
+        self.phys_parameters["E"]=E
+        #self.phys_parameters["ve"]=None
+        #self.phys_parameters["TE"]=None
 
         if self._fitted:
-            self.readable_parameters["Iterations"] = self.OptimizeResult.nit
+            self.phys_parameters["Iterations"] = self.OptimizeResult.nit
 
         if self._bootstrapped:
             # convert bootstrapped_raw to boostrapped_physiological
@@ -841,13 +840,13 @@ class TwoCUModel(CompartmentModel):
             result_name_list = [
                 'low estimate', 'mean estimate', 'high estimate']
             for j in range(len(result_name_list)):
-                self.readable_parameters["%s" % result_name_list[j]] = {'Fp': self.bootstrap_percentile[j, 0], 'vp': self.bootstrap_percentile[j, 1],
+                self.phys_parameters["%s" % result_name_list[j]] = {'Fp': self.bootstrap_percentile[j, 0], 'vp': self.bootstrap_percentile[j, 1],
                                                                         'TP': self.bootstrap_percentile[j, 2], 'E': self.bootstrap_percentile[j, 3],
                                                                         'PS': self.bootstrap_percentile[j, 4]
                                                                         }
 
 
-        return self.readable_parameters
+        return self.phys_parameters
 
 
 

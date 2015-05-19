@@ -41,7 +41,7 @@ def test_2CUM_fitting(TwoCUM):
     fitparameters = TwoCUM.get_parameters()
     # assert number of parameters
     assert len(TwoCUM._fitparameters) == 3
-    assert len(TwoCUM.readable_parameters) == 6
+    assert len(TwoCUM.phys_parameters) == 6
 
     # assert number of fit parameters (t4)
 

@@ -201,7 +201,7 @@ def do_not_test_compartmentModel_fftconvolution_equal_to_python_convolution(mode
 
 
 def test_compartmentModel_readableParameters_contain_all_keys(preparedmodel):
-    assert all([k in preparedmodel.readable_parameters for k in ("F", "v")])
+    assert all([k in preparedmodel.phys_parameters for k in ("F", "v")])
 
 def test_compartmentModel_fit_model_returns_bool(preparedmodel):
     """Test whether the fit routine reports sucess of fitting
@@ -251,7 +251,7 @@ def test_compartmentModel_startdict_is_saved_appropriately(preparedmodel):
     """
 
     original_startdict = {'F': 51.0, 'v': 11.2}
-    readable_dict=preparedmodel.readable_parameters
+    readable_dict=preparedmodel.phys_parameters
     # we need to check whether all original keys/values are contained in the model parameter dict:
     for key, value in original_startdict.iteritems():
         if key in readable_dict:
@@ -296,13 +296,13 @@ def test_compartmentmodels_bootstrapping_output_dimension_and_type(lungdata):
     bootstrap = lungdata.bootstrap()
     assert (lungdata._bootstrapped == True)
     assert (lungdata.bootstrap_result_raw.shape == (2,100))    
-    assert (type(lungdata.readable_parameters) == dict)
-    assert (len(lungdata.readable_parameters) == 7)   
+    assert (type(lungdata.phys_parameters) == dict)
+    assert (len(lungdata.phys_parameters) == 7)   
     assert ('low estimate' and 'high estimate' and 'mean estimate' in 
-            lungdata.readable_parameters)
-    assert (type(lungdata.readable_parameters['low estimate']) == dict and 
-            type(lungdata.readable_parameters['mean estimate']) == dict and
-            type(lungdata.readable_parameters['high estimate']) == dict)
+            lungdata.phys_parameters)
+    assert (type(lungdata.phys_parameters['low estimate']) == dict and 
+            type(lungdata.phys_parameters['mean estimate']) == dict and
+            type(lungdata.phys_parameters['high estimate']) == dict)
 
 
 def test_compartmentmodels_bootstrapping_output_content(lungdata):    
@@ -314,16 +314,16 @@ def test_compartmentmodels_bootstrapping_output_content(lungdata):
     bootstrap = lungdata.bootstrap()
     assert (lungdata.bootstrap_result_raw.shape ==(2, lungdata.k))
     assert (lungdata._bootstrapped == True)
-    dict_fit={'F':lungdata.readable_parameters['F'],
-                'v':lungdata.readable_parameters['v'],
-                'MTT':lungdata.readable_parameters['MTT']
+    dict_fit={'F':lungdata.phys_parameters['F'],
+                'v':lungdata.phys_parameters['v'],
+                'MTT':lungdata.phys_parameters['MTT']
                 }
-    assert (lungdata.readable_parameters['low estimate'] <
-            lungdata.readable_parameters['mean estimate'])
-    assert (lungdata.readable_parameters['mean estimate'] <
-            lungdata.readable_parameters['high estimate'])
-    assert (lungdata.readable_parameters['low estimate'] < dict_fit)
-    assert (dict_fit < lungdata.readable_parameters['high estimate'])
+    assert (lungdata.phys_parameters['low estimate'] <
+            lungdata.phys_parameters['mean estimate'])
+    assert (lungdata.phys_parameters['mean estimate'] <
+            lungdata.phys_parameters['high estimate'])
+    assert (lungdata.phys_parameters['low estimate'] < dict_fit)
+    assert (dict_fit < lungdata.phys_parameters['high estimate'])
  
      
 def test_compartmentmodels_bootstrapping_output_content_braindata(braindata):    
@@ -335,16 +335,16 @@ def test_compartmentmodels_bootstrapping_output_content_braindata(braindata):
     fit_result= braindata.fit_model()
     bootstrap = braindata.bootstrap()
     assert (braindata._bootstrapped == True)
-    dict_fit={'F':braindata.readable_parameters['F'],
-                'v':braindata.readable_parameters['v'],
-                'MTT':braindata.readable_parameters['MTT']
+    dict_fit={'F':braindata.phys_parameters['F'],
+                'v':braindata.phys_parameters['v'],
+                'MTT':braindata.phys_parameters['MTT']
                 }
-    assert (braindata.readable_parameters['low estimate'] <
-            braindata.readable_parameters['mean estimate'])
-    assert (braindata.readable_parameters['mean estimate'] <
-            braindata.readable_parameters['high estimate'])
-    assert (braindata.readable_parameters['low estimate'] < dict_fit)
-    assert (dict_fit < braindata.readable_parameters['high estimate'])
+    assert (braindata.phys_parameters['low estimate'] <
+            braindata.phys_parameters['mean estimate'])
+    assert (braindata.phys_parameters['mean estimate'] <
+            braindata.phys_parameters['high estimate'])
+    assert (braindata.phys_parameters['low estimate'] < dict_fit)
+    assert (dict_fit < braindata.phys_parameters['high estimate'])
     
 def test_AIC_higher_for_complex_models():
     """ in a one-compartment-situation, a model with more than one compartment  should have a higher AIC value
