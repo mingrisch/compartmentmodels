@@ -23,7 +23,7 @@ def TwoCUM():
     aif = aif1 - aif1[0:5].mean()
     model = TwoCUModel(time=time, curve=aif, aif=aif, startdict=startdict)
     # calculate a model curve
-    model.curve = model.calc_modelfunction(model._parameters)
+    model.curve = model.calc_modelfunction(model._fitparameters)
     model.curve += 0.002 * model.curve.max() * np.random.randn(len(time))
     # number of bootstraps
     model.k = 100
@@ -40,7 +40,7 @@ def test_2CUM_fitting(TwoCUM):
     fit_result = TwoCUM.fit_model()
     fitparameters = TwoCUM.get_parameters()
     # assert number of parameters
-    assert len(TwoCUM._parameters) == 3
+    assert len(TwoCUM._fitparameters) == 3
     assert len(TwoCUM.readable_parameters) == 6
 
     # assert number of fit parameters (t4)

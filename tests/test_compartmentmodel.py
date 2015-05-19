@@ -27,7 +27,7 @@ def preparedmodel():
     model = CompartmentModel(
         time=time, curve=np.zeros_like(time), aif=aif, startdict=startdict)
     # calculate a model curve
-    model.curve = model.calc_modelfunction(model._parameters)
+    model.curve = model.calc_modelfunction(model._fitparameters)
     return model
     
 
@@ -46,7 +46,7 @@ def braindata():
     model = CompartmentModel(
         time=time, curve=aif, aif=aif, startdict=startdict)
     # calculate a model curve
-    model.curve = model.calc_modelfunction(model._parameters)
+    model.curve = model.calc_modelfunction(model._fitparameters)
     model.curve += 0.02 * aif.max() * np.random.randn(len(time))
     # number of bootstraps
     model.k=100  
@@ -72,7 +72,7 @@ def lungdata():
     model = CompartmentModel(
         time=time, curve=curve, aif=aif, startdict=startdict)
     # calculate a model curve
-    model.curve = model.calc_modelfunction(model._parameters)
+    model.curve = model.calc_modelfunction(model._fitparameters)
     model.curve += 0.02 * aif.max() * np.random.randn(len(time))
     return model
 
@@ -224,7 +224,7 @@ def test_compartmentModel_start_parameter_conversion(preparedmodel):
     raw_vol=original_startdict.get("v") / 100
     lamda= raw_flow/raw_vol
 
-    par=preparedmodel._parameters
+    par=preparedmodel._fitparameters
     assert (par[0] == raw_flow) & (par[1] == lamda)
 
     
@@ -235,7 +235,7 @@ def test_compartmentModel_parameter_conversion(preparedmodel):
     """
     
     original_startdict= {'F': 51.0, 'v': 11.2}
-    raw_par= preparedmodel._parameters
+    raw_par= preparedmodel._fitparameters
     
     readable_dict= preparedmodel.get_parameters()
     # test whether the dictionaries contain i) the same keys and ii) the corresponding values are equal. All keys from the start dict have to be in the output dict. Additionally, the readable_dict may contain additional keys, which are not checked.
@@ -267,21 +267,21 @@ def test_compartmentModel_fit_model_determines_right_parameters(preparedmodel):
     This might become a longer test case...
     """
 
-    start_parameters=preparedmodel._parameters
+    start_parameters=preparedmodel._fitparameters
     return_value = preparedmodel.fit_model()
 
-    assert np.allclose(preparedmodel._parameters, start_parameters)
+    assert np.allclose(preparedmodel._fitparameters, start_parameters)
 
 def test_compartmentModel_fit_model_determines_right_parameters(lungdata):
     """ Are the fitted parameters the same as the initial parameters?
     This might become a longer test case...
     """
 
-    start_parameters=lungdata._parameters
+    start_parameters=lungdata._fitparameters
     return_value = lungdata.fit_model()
     print lungdata.OptimizeResult
     assert lungdata._fitted
-    #assert np.allclose(lungdata._parameters, start_parameters)
+    #assert np.allclose(lungdata._fitparameters, start_parameters)
 
 
 def test_compartmentmodels_bootstrapping_output_dimension_and_type(lungdata):
@@ -360,7 +360,7 @@ def test_AIC_higher_for_complex_models():
     ocm = CompartmentModel(
         time=time, curve=aif, aif=aif, startdict={'F': 31.0, 'v': 4.2})
     # calculate a model curve
-    ocm.curve = ocm.calc_modelfunction(ocm._parameters)
+    ocm.curve = ocm.calc_modelfunction(ocm._fitparameters)
     ocm.curve += 0.02 * ocm.curve.max() * np.random.randn(len(time))
     
     ocm.fit_model()
@@ -390,7 +390,7 @@ def test_compartmentmodel_cython_convolution_equal_to_python(preparedmodel):
 
     preparedmodel._use_cython=True
 
-    curve = preparedmodel.calc_modelfunction(preparedmodel._parameters)
+    curve = preparedmodel.calc_modelfunction(preparedmodel._fitparameters)
 
     assert np.allclose(original_curve, curve)
     
@@ -401,9 +401,9 @@ def test_compartmentmodel_cython_is_faster_than_python(preparedmodel):
     # to do: how do we get the execution time=?
     preparedmodel._use_cython=False
 
-    pythontime= timeit.timeit(lambda:preparedmodel.calc_modelfunction(preparedmodel._parameters), number = 1000)
+    pythontime= timeit.timeit(lambda:preparedmodel.calc_modelfunction(preparedmodel._fitparameters), number = 1000)
     preparedmodel._use_cython=True
-    cythontime= timeit.timeit(lambda:preparedmodel.calc_modelfunction(preparedmodel._parameters), number=1000)
+    cythontime= timeit.timeit(lambda:preparedmodel.calc_modelfunction(preparedmodel._fitparameters), number=1000)
     print "Python:  {}; Cython: {}".format(pythontime, cythontime)
     assert cythontime<pythontime
 

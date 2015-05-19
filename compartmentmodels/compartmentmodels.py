@@ -107,7 +107,7 @@ class CompartmentModel:
 
     readable_parameters: dict
         Dictionary of physiological parameters. These can be used as start
-        parameters for the fit, and are calculated from self._parameters after
+        parameters for the fit, and are calculated from self._fitparameters after
         a successfull fit
 
 
@@ -125,7 +125,7 @@ class CompartmentModel:
         self.residuals = curve
         self.fit = np.zeros_like(curve)
         self.aic = 0.0
-        self._parameters = np.zeros(2)
+        self._fitparameters = np.zeros(2)
 
         self.k = 500
         self._use_cython = use_cython
@@ -141,7 +141,7 @@ class CompartmentModel:
         self.OptimizeResult = None
 
         # convert the dictionary entry to 'raw' parameters:
-        self._parameters = self.convert_startdict(startdict)
+        self._fitparameters = self.convert_startdict(startdict)
 
         # defy method and bounds, which fit_model will use:
         self.constrained = False
@@ -174,9 +174,9 @@ class CompartmentModel:
         and the corresponding transit time. Derived models will likely have to
         override this method.  """
 
-        F = self._parameters[0] * 6000.
-        v = self._parameters[0] / self._parameters[1] * 100
-        mtt = 1 / self._parameters[1]
+        F = self._fitparameters[0] * 6000.
+        v = self._fitparameters[0] / self._fitparameters[1] * 100
+        mtt = 1 / self._fitparameters[1]
 
         self.readable_parameters["F"] = F
         self.readable_parameters["v"] = v
@@ -366,8 +366,8 @@ class CompartmentModel:
         vp = startdict.get("v") / 100
         lamda = 1. / (vp / Fp)
 
-        # store the parameters in self._parameters:
-        self._parameters = np.asarray([Fp, lamda])
+        # store the parameters in self._fitparameters:
+        self._fitparameters = np.asarray([Fp, lamda])
         return np.asarray([Fp, lamda])
 
     def set_constraints(self, constrained):
@@ -411,9 +411,9 @@ class CompartmentModel:
         self._fitted = False
         self.fft = fft
         self.OptimizeResult = None
-        # convert start dict to self._parameters
+        # convert start dict to self._fitparameters
         if startdict is None:
-            startparameters = self._parameters
+            startparameters = self._fitparameters
         else:
             startparameters = self.convert_startdict(startdict)
 
@@ -423,11 +423,11 @@ class CompartmentModel:
                                method=self.method,
                                bounds=self.bounds)
 
-        self._parameters = fit_results.x
+        self._fitparameters = fit_results.x
 
         # store the Optimize Result, in case we need it later on
         self.OptimizeResult = fit_results
-        self.fit = self.calc_modelfunction(self._parameters)
+        self.fit = self.calc_modelfunction(self._fitparameters)
         self._fitted = fit_results.success
 
         return fit_results.success
@@ -438,7 +438,7 @@ class CompartmentModel:
         successful fit"""
         if self._fitted:
             n = self.fit.size
-            npar = len(self._parameters)
+            npar = len(self._fitparameters)
             ss = np.sum(np.square(self.residuals))
 
             aic = n* np.log(ss/n) + 2*(npar+1) + 2*(npar+1)*(npar+2)/(n-npar-2)
@@ -467,7 +467,7 @@ class CompartmentModel:
         # need to change variables for bootstrapping
         original_curve = self.curve
         original_fit = self.fit
-        original_parameters = self._parameters
+        original_parameters = self._fitparameters
         original_readable_parameters = self.readable_parameters
 
         # set of residuals calculated for bootstrapping
@@ -481,7 +481,7 @@ class CompartmentModel:
                 'probably not normal distributed residuals. Try another model')
 
         # array, which will be overwritten with the results
-        self.bootstrap_result_raw = np.zeros((len(self._parameters), self.k))
+        self.bootstrap_result_raw = np.zeros((len(self._fitparameters), self.k))
 
         # todo: self.bootstrap_result should contain the physiological
         # parameters, derived from the fit parameters by self._fit_to_phys, or
@@ -494,13 +494,13 @@ class CompartmentModel:
                 0, residuals_bootstrap.shape[0], residuals_bootstrap.shape)
             self.curve = original_fit + residuals_bootstrap[sample_index]
             self.fit_model(original_readable_parameters)
-            self.bootstrap_result_raw[:, i] = self._parameters
+            self.bootstrap_result_raw[:, i] = self._fitparameters
             # todo: here, we need the conversion to physiological parameters
 
         # restore variables
         self.curve = original_curve
         self.fit = original_fit
-        self._parameters = original_parameters
+        self._fitparameters = original_parameters
         self.readable_parameters = original_readable_parameters
         self._bootstrapped = True
 
@@ -614,13 +614,13 @@ class TwoCXModel(CompartmentModel):
         returns a dictionary with keys Fp, vp, TP, PS, ve, TE
         conversion into physiological parameters follows sourbron, mrm09
         """
-        # self._parameters=[Fp, delta, E, KM]
+        # self._fitparameters=[Fp, delta, E, KM]
 
-        delta = self._parameters[1]
-        KM = self._parameters[3]
+        delta = self._fitparameters[1]
+        KM = self._fitparameters[3]
         KP = KM + delta
-        EM = self._parameters[2]
-        Fp = self._parameters[0]
+        EM = self._fitparameters[2]
+        Fp = self._fitparameters[0]
 
         TB = 1.0 / (KP - EM * (KP - KM))
         TE = 1.0 / (TB * KP * KM)
@@ -638,7 +638,7 @@ class TwoCXModel(CompartmentModel):
         self.readable_parameters["ve"] = ve * 100.0
         self.readable_parameters["TE"] = TE
         # pseuo code
-        if  self._parameters.any() < 0:
+        if  self._fitparameters.any() < 0:
             print "Something went wrong with the constraints!"
         
 
@@ -682,7 +682,7 @@ class TwoCXModel(CompartmentModel):
                 #check for values < 0
                 #if any( v < 0 for v in self.readable_parameters.itervalues()):
                   #  print "something went wrong with the reaable parameters"
-                   # print self._parameters
+                   # print self._fitparameters
                    # print self.readable_parameters
                 
             self.bootstrap_percentile = np.percentile(
@@ -741,7 +741,7 @@ class TwoCUModel(CompartmentModel):
 
     readable_parameters: dict
         Dictionary of physiological parameters. These can be used as start
-        parameters for the fit, and are calculated from self._parameters after
+        parameters for the fit, and are calculated from self._fitparameters after
         a successfull fit
 
 
@@ -800,9 +800,9 @@ class TwoCUModel(CompartmentModel):
         returns a dictionary with keys Fp, vp, TP, PS, ve, TE
         conversion into physiological parameters follows sourbron, mrm09
         """
-        Fp = self._parameters[0]
-        TP = 1./self._parameters[1]
-        E  = self._parameters[2]
+        Fp = self._fitparameters[0]
+        TP = 1./self._fitparameters[1]
+        E  = self._fitparameters[2]
         vp = TP*Fp/(1.0 -E)
         PS = E*Fp/(1.0-E)
 

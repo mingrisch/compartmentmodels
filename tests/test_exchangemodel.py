@@ -23,7 +23,7 @@ def TwoCXM():
     aif = aif1 - aif1[0:5].mean()
     model = TwoCXModel(time=time, curve=aif, aif=aif, startdict=startdict)
     # calculate a model curve
-    model.curve = model.calc_modelfunction(model._parameters)
+    model.curve = model.calc_modelfunction(model._fitparameters)
     model.curve += 0.002 * model.curve.max() * np.random.randn(len(time))
     # number of bootstraps
     model.k = 100
@@ -40,7 +40,7 @@ def test_2CXM_fitting(TwoCXM):
     fit_result = TwoCXM.fit_model()
     fitparameters = TwoCXM.get_parameters()
     # assert number of parameters
-    assert len(TwoCXM._parameters) == 4
+    assert len(TwoCXM._fitparameters) == 4
     assert len(TwoCXM.readable_parameters) == 8
 
     # assert number of fit parameters (t4)
